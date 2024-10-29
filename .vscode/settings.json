@@ -1,3 +1,5 @@
 {
-    "cmake.sourceDirectory": "C:/DevWorks/GitHub/Parking-Management-System/parking_management_system/windows"
+    "cmake.sourceDirectory": "C:/DevWorks/GitHub/Parking-Management-System/parking_management_system/windows",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "java.compile.nullAnalysis.mode": "automatic"
 }
