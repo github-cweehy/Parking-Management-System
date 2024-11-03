@@ -1,7 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'signup.dart';
+import 'mainpage.dart';
 
-class LoginPage extends StatelessWidget {
+class LoginPage extends StatefulWidget {
+  @override
+  _LoginPageState createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _login() async {
+    String username = _usernameController.text.trim();
+    String password = _passwordController.text.trim();
+
+    try {
+      // Retrieve user document with matching username
+      QuerySnapshot userSnapshot = await _firestore
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .get();
+
+      if (userSnapshot.docs.isNotEmpty) {
+        var userDoc = userSnapshot.docs[0];
+        String storedPassword = userDoc['password'];
+        String userId = userDoc.id; // Get the user ID from the document ID
+
+        // Check if password matches
+        if (storedPassword == password) {
+          // Navigate to the main page with userId
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MainPage(userId: userId),
+            ),
+          );
+        } else {
+          // Show error if password is incorrect
+          _showErrorDialog('Incorrect password');
+        }
+      } else {
+        // Show error if username is not found
+        _showErrorDialog('User not found');
+      }
+    } catch (e) {
+      // Show error for any other issues
+      _showErrorDialog('Error: ${e.toString()}');
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Login Failed'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -13,14 +82,11 @@ class LoginPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo Image
                 Image.asset(
                   'assets/logomelaka.jpg',
                   height: 150,
                 ),
                 const SizedBox(height: 20),
-
-                // Title
                 const Text(
                   'Melaka Parking',
                   style: TextStyle(
@@ -29,8 +95,6 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // Subtitle
                 const Text(
                   'Login to your account',
                   style: TextStyle(
@@ -39,8 +103,6 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-
-                // Instruction Text
                 const Text(
                   'Enter username and password',
                   style: TextStyle(
@@ -49,9 +111,8 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // Email TextField
                 TextField(
+                  controller: _usernameController,
                   decoration: InputDecoration(
                     labelText: 'Username',
                     filled: true,
@@ -63,9 +124,8 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 20),
-
-                // Password TextField
                 TextField(
+                  controller: _passwordController,
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: 'Password',
@@ -78,14 +138,10 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // Login Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Handle login logic here
-                    },
+                    onPressed: _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       padding: const EdgeInsets.symmetric(vertical: 15),
@@ -103,8 +159,6 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 10),
-
-                // Forgot Password
                 TextButton(
                   onPressed: () {
                     // Handle forgot password
@@ -115,8 +169,6 @@ class LoginPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                // Sign Up Option
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -144,5 +196,12 @@ class LoginPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 }

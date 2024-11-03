@@ -45,6 +45,7 @@ class _SignUpPageState extends State<SignUpPage> {
           'email': email,
           'username': username,
           'phone_number': phoneNumber,
+          'password': password,
         });
 
         // Navigate to the LoginPage
