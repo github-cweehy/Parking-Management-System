@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'userprofile.dart'; 
+import 'login.dart'; 
 
 class MainPage extends StatefulWidget {
   final String userId;
@@ -10,6 +12,7 @@ class MainPage extends StatefulWidget {
   @override
   _MainPageState createState() => _MainPageState();
 }
+
 class _MainPageState extends State<MainPage> {
   String username = '';
 
@@ -33,6 +36,25 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
+  void _logout(BuildContext context) async{
+  try {
+    // Sign out from Firebase Authentication
+    await FirebaseAuth.instance.signOut();
+    
+    // Navigate to LoginPage and replace the current page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginPage()),
+    );
+  } catch (e) {
+    // Handle any errors that occur during sign-out
+    print("Error signing out: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error signing out. Please try again.')),
+    );
+  }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -48,22 +70,14 @@ class _MainPageState extends State<MainPage> {
         title: Image.asset(
           'assets/logomelaka.jpg', 
           height: 60,
-          
         ),
         centerTitle: true,
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: GestureDetector(
-              onTap: (){
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => UserProfilePage(userId:widget.userId),
-                  ),
-                );
-              },
-              child: Row(
+            child: DropdownButton<String>(
+              underline: SizedBox(),
+              icon: Row(
                 children: [
                   Text(
                     username,
@@ -75,6 +89,24 @@ class _MainPageState extends State<MainPage> {
                   ),
                 ],
               ),
+              items: <String>['Profile', 'Logout'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (String? value) {
+                if (value == 'Profile') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UserProfilePage(userId: widget.userId),
+                    ),
+                  );
+                } else if (value == 'Logout') {
+                  _logout(context);
+                }
+              },
             ),
           ),
         ],

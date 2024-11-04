@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parking_management_system/edituserprofile.dart';
 
 class UserProfilePage extends StatelessWidget {
   final String userId;
@@ -20,8 +21,23 @@ class UserProfilePage extends StatelessWidget {
     }
   }
 
+    Future<void> _addVehicle(String registrationNumber, bool isDefault) async {
+    try {
+      DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
+      await userDoc.update({
+        'vehicles': FieldValue.arrayUnion([registrationNumber]),
+        'default_vehicle': isDefault ? registrationNumber : FieldValue.delete(), // Only set if default
+      });
+    } catch (e) {
+      print("Error adding vehicle: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    String vehicleRegistration ='';
+    bool isDefault = false;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -34,10 +50,12 @@ class UserProfilePage extends StatelessWidget {
               // Handle menu press
             },
           ),
+
           title: Image.asset(
             'assets/logomelaka.jpg', 
             height: 60,
           ),
+
           centerTitle: true,
           actions: [
             Padding(
@@ -45,7 +63,7 @@ class UserProfilePage extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    username, // Display the actual username here
+                    username, 
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(Icons.arrow_drop_down, color: Colors.black),
@@ -53,13 +71,14 @@ class UserProfilePage extends StatelessWidget {
               ),
             ),
           ],
+
           bottom: TabBar(
-            indicatorColor: Colors.blue,
+            indicatorColor: Colors.red,
             tabs: [
               Tab(
                 child: Text(
                   "Profile",
-                  style: TextStyle(color: Colors.blue),
+                  style: TextStyle(color: Colors.black),
                 ),
               ),
               Tab(
@@ -71,6 +90,7 @@ class UserProfilePage extends StatelessWidget {
             ],
           ),
         ),
+
         body: FutureBuilder<Map<String, dynamic>?>(
           future: _fetchUserData(),
           builder: (context, snapshot) {
@@ -204,7 +224,12 @@ class UserProfilePage extends StatelessWidget {
                           ),
                           ElevatedButton(
                             onPressed: () {
-
+                              Navigator.push(
+                                context, 
+                                MaterialPageRoute(
+                                  builder: (context) => EditUserProfile(),
+                                ),
+                              );
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.red,
@@ -223,9 +248,104 @@ class UserProfilePage extends StatelessWidget {
                     ],
                   ),
                 ),
-                // Vehicles Tab (Placeholder)
-                Center(
-                  child: Text("Vehicles"),
+                
+                // Vehicles Tab 
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Choose vehicle type",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+
+                        items: ['Car', 'Motorcycle', 'Van', 'Bus', 'Truck'].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          // Handle vehicle type selection
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      Text(
+                        "Add your vehicle registration plate",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        decoration: InputDecoration(
+                          hintText: 'Enter registration plate',
+                          hintStyle: TextStyle(color:Colors.grey),
+                          filled: true,
+                          fillColor: Colors.grey[200],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onChanged: (value) {
+                          vehicleRegistration = value;
+                        },
+                      ),
+                      const SizedBox(height: 40),
+
+                      CheckboxListTile(
+                        title: Text("Set as default vehicle"),
+                        value: isDefault,
+                        onChanged: (newValue) {
+                          isDefault = newValue ?? false; // Update default vehicle status
+                        },
+                      ),
+                                            
+                      Center(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (vehicleRegistration.isNotEmpty) {
+                              _addVehicle(vehicleRegistration, isDefault); // Call add vehicle method
+                              vehicleRegistration = ''; // Clear the input after adding
+                              isDefault = false; // Reset the default checkbox
+                              // Optionally, refresh the UI or show a success message
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add, color: Colors.white),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Add Vehicle',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             );
