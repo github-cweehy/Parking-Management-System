@@ -413,6 +413,7 @@ void _showSnackBar(String message) {
                         // Default Vehicle Checkbox
                         Row(
                           children: [
+                            Text("Set as default vehicle"),
                             Checkbox(
                               value: isDefault,
                               onChanged: (bool? value) {
@@ -421,17 +422,27 @@ void _showSnackBar(String message) {
                                 });
                               },
                             ),
-                            Text("Set as default vehicle"),
                           ],
                         ),
                         const SizedBox(height: 20),
 
                         // Add Vehicle Button
-                        ElevatedButton(
-                          onPressed: () {
-                            _addVehicle(vehicleRegistration.trim(), isDefault);
-                          },
-                          child: Text('Add Vehicle'),
+                        Center(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _addVehicle(vehicleRegistration.trim(), isDefault);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            ),
+                            child: Text(
+                              'Add Vehicle',
+                              style: TextStyle(fontSize: 17, color: Colors.white),
+                            ),
+                          ),
                         ),
                       ],
                     ),

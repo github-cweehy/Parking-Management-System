@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'userprofile.dart'; 
 import 'login.dart'; 
+import 'location.dart';
 
 class MainPage extends StatefulWidget {
   final String userId;
@@ -81,12 +82,12 @@ class _MainPageState extends State<MainPage> {
     return GestureDetector(
       onTap: () {
         Navigator.pop(context); // Close the dialog
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) => LocationPage(), // Navigate to location page
-        //   ),
-        // );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => LocationPage(userId: title,pricingOption: title,), 
+          ),
+        );
       },
       child: Container(
         width: double.infinity,

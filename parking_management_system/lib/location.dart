@@ -1,0 +1,266 @@
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'userprofile.dart'; 
+import 'login.dart'; 
+import 'addparking.dart';
+
+class LocationPage extends StatefulWidget {
+  final String userId;
+  final String pricingOption; 
+
+  LocationPage({required this.pricingOption, required this.userId});
+
+  @override
+  _LocationPageState createState() => _LocationPageState();
+}
+
+  void _logout(BuildContext context) async{
+  try {
+    // Sign out from Firebase Authentication
+    await FirebaseAuth.instance.signOut();
+    
+    // Navigate to LoginPage and replace the current page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginPage()),
+    );
+  } catch (e) {
+    // Handle any errors that occur during sign-out
+    print("Error signing out: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error signing out. Please try again.')),
+    );
+  }
+}
+
+class _LocationPageState extends State<LocationPage> {
+  String username = '';
+  GoogleMapController? _mapController;
+  LatLng? _currentPosition;
+  String _currentStreet = "Detecting location...";
+  Marker? _currentLocationMarker;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsername();
+    _determinePosition();
+  }
+
+  Future<void> _fetchUsername() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .get();
+      setState(() {
+        username = userDoc.data()?['username'] ?? '';
+      });
+    } catch (e) {
+      print("Error fetching username: $e");
+    }
+  }
+
+  Future<void> _determinePosition() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return;
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+
+    if (permission == LocationPermission.deniedForever) return;
+
+    Position position = await Geolocator.getCurrentPosition();
+    _updateCurrentLocation(LatLng(position.latitude, position.longitude));
+  }
+
+  void _updateCurrentLocation(LatLng position) async {
+    setState(() {
+      _currentPosition = position;
+      _currentLocationMarker = Marker(
+        markerId: MarkerId('currentLocation'),
+        position: position,
+        infoWindow: InfoWindow(title: "You are here"),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      );
+    });
+
+    _getAddressFromLatLng(position);
+    if (_mapController != null) {
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(position, 15.0));
+    }
+  }
+
+  Future<void> _getAddressFromLatLng(LatLng position) async {
+    try {
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
+        setState(() {
+          _currentStreet = placemarks[0].street ?? "Unknown Street";
+        });
+      }
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
+    if (_currentPosition != null) {
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLng(_currentPosition!),
+      );
+    }
+  }
+
+  Future<void> _searchStreet(String streetName) async {
+    List<Location> locations = await locationFromAddress(streetName + ", Melaka");
+    if (locations.isNotEmpty) {
+      LatLng searchPosition = LatLng(locations.first.latitude, locations.first.longitude);
+      _updateCurrentLocation(searchPosition);
+    }
+  }
+
+  void _confirmLocation() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddParkingPage(
+          location: _currentStreet,
+          pricingOption: widget.pricingOption,
+          userId: widget.userId,
+        ),
+      ),
+    );
+  }
+
+
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.menu, color: Colors.black),
+          onPressed: () {
+            // Handle menu press
+          },
+        ),
+        title: Image.asset(
+          'assets/logomelaka.jpg', 
+          height: 60,
+        ),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: DropdownButton<String>(
+              underline: SizedBox(),
+              icon: Row(
+                children: [
+                  Text(
+                    username,
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.black,
+                  ),
+                ],
+              ),
+              items: <String>['Profile', 'Logout'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (String? value) {
+                if (value == 'Profile') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => UserProfilePage(userId: widget.userId),
+                    ),
+                  );
+                } else if (value == 'Logout') {
+                  _logout(context);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+      body: Stack(
+        children: [
+          GoogleMap(
+            onMapCreated: _onMapCreated,
+            initialCameraPosition: CameraPosition(
+              target: LatLng(2.1938, 102.2496), // Initial center on Melaka Raya
+              zoom: 14.0,
+            ),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            markers: _currentLocationMarker != null ? {_currentLocationMarker!} : {},
+          ),
+          Positioned(
+            top: 20.0,
+            left: 15.0,
+            right: 15.0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8.0),
+                boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10.0)],
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'Search area',
+                        border: InputBorder.none,
+                      ),
+                      onSubmitted: (value) {
+                        _searchStreet(value);
+                      },
+                    ),
+                  ),
+                  Icon(Icons.search),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 20.0,
+            left: 15.0,
+            right: 15.0,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+              onPressed: _confirmLocation,
+              child: Text("Confirm location: $_currentStreet"),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
