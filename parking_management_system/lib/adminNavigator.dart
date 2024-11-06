@@ -45,7 +45,7 @@ class DrawerMenu extends StatelessWidget{
 
           //Manage Admin Profile
           ListTile(
-            leading: Icon(Icons.account_circle),
+            leading: Icon(Icons.people_alt_outlined),
             title: Text(
               'Manage Admin Account', 
               style: TextStyle(
