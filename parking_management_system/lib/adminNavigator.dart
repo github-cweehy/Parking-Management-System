@@ -32,7 +32,12 @@ class DrawerMenu extends StatelessWidget{
           //Admin Profile
           ListTile(
             leading: Icon(Icons.person),
-            title: Text('Admin Profile', style: TextStyle(fontWeight: FontWeight.bold),),
+            title: Text(
+              'Admin Profile', 
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black),
+            ),
             onTap: () {
               //Navigator to Admin Profile Page
             },
@@ -41,7 +46,12 @@ class DrawerMenu extends StatelessWidget{
           //Manage Admin Profile
           ListTile(
             leading: Icon(Icons.account_circle),
-            title: Text('Manage Admin Account', style: TextStyle(fontWeight: FontWeight.bold),),
+            title: Text(
+              'Manage Admin Account', 
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black),
+            ),
             onTap: () {
               //Navigator to Manage Admin Account Page
             },
@@ -52,7 +62,12 @@ class DrawerMenu extends StatelessWidget{
             leading: Icon(Icons.list),
             title: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Parking Selection', style: TextStyle(fontWeight: FontWeight.bold),),
+              child: Text(
+                'Parking Selection', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black),
+              ),
             ),
             children: <Widget>[
               Padding(
@@ -94,7 +109,12 @@ class DrawerMenu extends StatelessWidget{
             leading: Icon(Icons.list),
             title: Align(
               alignment: Alignment.centerLeft,
-              child: Text('Packages Bought', style: TextStyle(fontWeight: FontWeight.bold),),
+              child: Text(
+                'Packages Bought', 
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black),
+              ),
             ),
             children: <Widget>[
               Padding(
