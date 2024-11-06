@@ -1,43 +1,200 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parking_management_system/edituserprofile.dart';
 
-class UserProfilePage extends StatelessWidget {
+class UserProfilePage extends StatefulWidget {
   final String userId;
-  final String username = '';
 
   UserProfilePage({required this.userId});
 
-  Future<Map<String, dynamic>?> _fetchUserData() async {
+  @override
+  _UserProfilePageState createState() => _UserProfilePageState();
+}
+
+class _UserProfilePageState extends State<UserProfilePage> {
+  String vehicleRegistration = '';
+  bool isDefault = false;
+  String selectedVehicleType = 'Car';
+  List<Map<String, dynamic>> vehicles = [];
+  String? defaultVehicle;
+  Map<String, dynamic>? userData;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
     try {
       DocumentSnapshot userDoc = await FirebaseFirestore.instance
           .collection('users')
-          .doc(userId)
+          .doc(widget.userId)
           .get();
-      return userDoc.data() as Map<String, dynamic>?;
+      Map<String, dynamic>? data = userDoc.data() as Map<String, dynamic>?;
+
+      if (data != null) {
+        setState(() {
+          userData = data;
+          vehicles = List<Map<String, dynamic>>.from(data['vehicles'] ?? []);
+          defaultVehicle = data['default_vehicle'];
+        });
+      }
     } catch (e) {
       print("Error fetching user data: $e");
-      return null;
     }
   }
 
-    Future<void> _addVehicle(String registrationNumber, bool isDefault) async {
-    try {
-      DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
-      await userDoc.update({
-        'vehicles': FieldValue.arrayUnion([registrationNumber]),
-        'default_vehicle': isDefault ? registrationNumber : FieldValue.delete(), // Only set if default
-      });
-    } catch (e) {
-      print("Error adding vehicle: $e");
-    }
+  Future<void> _edit(String field, String currentValue) async {
+  TextEditingController controller = TextEditingController(text: currentValue);
+
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Edit $field'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(hintText: 'Enter new $field'),
+        ),
+        actions: [
+          TextButton(
+            child: Text('Cancel'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+          TextButton(
+            child: Text('Save'),
+            onPressed: () async {
+              String newValue = controller.text.trim();
+              if (newValue.isNotEmpty) {
+                if (field == 'phone_number') {
+                  if (await _isPhoneNumberDuplicate(newValue)) {
+                    _showSnackBar("This phone number is already in use.");
+                    return;
+                  }
+                }
+                try {
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(widget.userId)
+                      .update({field: newValue});
+                  setState(() {
+                    if (field == 'first_name') {
+                      userData?['first_name'] = newValue;
+                    } else if (field == 'last_name') {
+                      userData?['last_name'] = newValue;
+                    }
+                  });
+                  Navigator.of(context).pop();
+                } catch (e) {
+                  print("Error updating $field: $e");
+                  _showSnackBar("Failed to update $field.");
+                }
+              }
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<bool> _isPhoneNumberDuplicate(String phoneNumber) async {
+  try {
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('phone_number', isEqualTo: phoneNumber)
+        .get();
+    return querySnapshot.docs.isNotEmpty;
+  } catch (e) {
+    print("Error checking for duplicate phone number: $e");
+    return false; // Assume no duplicates on error
   }
+}
+
+Future<void> _addVehicle(String registrationNumber, bool isDefault) async {
+  final RegExp platePattern = RegExp(r'^[A-Za-z]{3}\s\d{1,4}$');
+
+  if (!platePattern.hasMatch(registrationNumber)) {
+    _showSnackBar('Please enter a valid registration plate (e.g., ABC 123).');
+    return;
+  }
+
+  bool isDuplicate = vehicles.any((vehicle) => vehicle['registrationNumber'] == registrationNumber);
+  if (isDuplicate) {
+    _showSnackBar('This registration number already exists.');
+    return;
+  }
+
+  try {
+    DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(widget.userId);
+    Map<String, dynamic> newVehicle = {
+      'registrationNumber': registrationNumber,
+      'type': selectedVehicleType
+    };
+    vehicles.add(newVehicle);
+
+    await userDoc.update({
+      'vehicles': vehicles,
+      'default_vehicle': isDefault ? registrationNumber : defaultVehicle,
+    });
+
+    setState(() {
+      if (isDefault) {
+        defaultVehicle = registrationNumber;
+      }
+      vehicleRegistration = '';
+      this.isDefault = false;
+    });
+  } catch (e) {
+    print("Error adding vehicle: $e");
+  }
+}
+
+Future<void> _deleteVehicle(String registrationNumber) async {
+  try {
+    DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(widget.userId);
+    setState(() {
+      vehicles.removeWhere((vehicle) => vehicle['registrationNumber'] == registrationNumber);
+      if (defaultVehicle == registrationNumber) {
+        defaultVehicle = vehicles.isNotEmpty ? vehicles[0]['registrationNumber'] : null;
+      }
+    });
+
+    await userDoc.update({
+      'vehicles': vehicles,
+      'default_vehicle': defaultVehicle,
+    });
+  } catch (e) {
+    print("Error deleting vehicle: $e");
+  }
+}
+
+void _setDefaultVehicle(String registrationNumber) async {
+  try {
+    DocumentReference userDoc = FirebaseFirestore.instance.collection('users').doc(widget.userId);
+    await userDoc.update({'default_vehicle': registrationNumber});
+
+    setState(() {
+      defaultVehicle = registrationNumber;
+    });
+  } catch (e) {
+    print("Error setting default vehicle: $e");
+  }
+}
+
+void _showSnackBar(String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(message),
+      backgroundColor: Colors.red,
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
-    String vehicleRegistration ='';
-    bool isDefault = false;
-
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -50,12 +207,10 @@ class UserProfilePage extends StatelessWidget {
               // Handle menu press
             },
           ),
-
           title: Image.asset(
-            'assets/logomelaka.jpg', 
+            'assets/logomelaka.jpg',
             height: 60,
           ),
-
           centerTitle: true,
           actions: [
             Padding(
@@ -63,7 +218,7 @@ class UserProfilePage extends StatelessWidget {
               child: Row(
                 children: [
                   Text(
-                    username, 
+                    userData?['username'] ?? '',
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(Icons.arrow_drop_down, color: Colors.black),
@@ -71,287 +226,275 @@ class UserProfilePage extends StatelessWidget {
               ),
             ),
           ],
-
-          bottom: TabBar(
-            indicatorColor: Colors.red,
-            tabs: [
-              Tab(
-                child: Text(
-                  "Profile",
-                  style: TextStyle(color: Colors.black),
-                ),
-              ),
-              Tab(
-                child: Text(
-                  "Vehicles",
-                  style: TextStyle(color: Colors.black),
-                ),
-              ),
-            ],
-          ),
         ),
-
-        body: FutureBuilder<Map<String, dynamic>?>(
-          future: _fetchUserData(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text("Error fetching user data."));
-            }
-            if (!snapshot.hasData || snapshot.data == null) {
-              return Center(child: Text("No user data found."));
-            }
-
-            final userData = snapshot.data!;
-            return TabBarView(
-              children: [
-                // Profile Tab
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      // Profile Avatar
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.red,
-                        child: Icon(Icons.person, color: Colors.black, size: 50),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        userData['username'] ?? "User's Name",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Displaying First Name
-                      TextField(
-                        decoration: InputDecoration(
-                          labelText: 'First Name',
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        controller: TextEditingController(text: userData['first_name']),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 10),
-
-                      // Displaying Last Name
-                      TextField(
-                        decoration: InputDecoration(
-                          labelText: 'Last Name',
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        controller: TextEditingController(text: userData['last_name']),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 10),
-
-                      TextField(
-                        decoration: InputDecoration(
-                          labelText: 'Username',
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        controller: TextEditingController(text: userData['username']),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 10),
-
-                      TextField(
-                        decoration: InputDecoration(
-                          labelText: 'Email',
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        controller: TextEditingController(text: userData['email']),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 10),
-
-                      TextField(
-                        decoration: InputDecoration(
-                          labelText: 'Phone Number',
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        controller: TextEditingController(text: userData['phone_number']),
-                        readOnly: true,
-                      ),
-                      const SizedBox(height: 60),
-
-                      // Return and Edit Buttons
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.pop(context); // Go back to the previous screen
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: Text(
-                              'Return',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context, 
-                                MaterialPageRoute(
-                                  builder: (context) => EditUserProfile(),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: Text(
-                              'Edit',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Vehicles Tab 
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Choose vehicle type",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 10),
-
-                      DropdownButtonFormField<String>(
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-
-                        items: ['Car', 'Motorcycle', 'Van', 'Bus', 'Truck'].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          // Handle vehicle type selection
-                        },
-                      ),
-                      const SizedBox(height: 20),
-
-                      Text(
-                        "Add your vehicle registration plate",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 10),
-                      TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Enter registration plate',
-                          hintStyle: TextStyle(color:Colors.grey),
-                          filled: true,
-                          fillColor: Colors.grey[200],
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        onChanged: (value) {
-                          vehicleRegistration = value;
-                        },
-                      ),
-                      const SizedBox(height: 40),
-
-                      CheckboxListTile(
-                        title: Text("Set as default vehicle"),
-                        value: isDefault,
-                        onChanged: (newValue) {
-                          isDefault = newValue ?? false; // Update default vehicle status
-                        },
-                      ),
-                                            
-                      Center(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            if (vehicleRegistration.isNotEmpty) {
-                              _addVehicle(vehicleRegistration, isDefault); // Call add vehicle method
-                              vehicleRegistration = ''; // Clear the input after adding
-                              isDefault = false; // Reset the default checkbox
-                              // Optionally, refresh the UI or show a success message
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add, color: Colors.white),
-                              const SizedBox(width: 10),
-                              Text(
-                                'Add Vehicle',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+        body: Column(
+          children: [
+            TabBar(
+              indicatorColor: Colors.red,
+              tabs: [
+                Tab(child: Text("Profile", style: TextStyle(color: Colors.black))),
+                Tab(child: Text("Vehicles", style: TextStyle(color: Colors.black))),
               ],
-            );
-          },
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  // Profile Tab
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.red,
+                          child: Icon(Icons.person, color: Colors.black, size: 50),
+                        ),
+                        const SizedBox(height: 10),
+
+                        Text(
+                          userData?['username'] ?? "User's Name",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // First Name
+                        _buildEditableTextField('First Name', userData?['first_name'],(){
+                          _edit('first_name', userData?['first_name'] ?? '');
+                        }),
+                        const SizedBox(height: 10),
+
+                        // Last Name
+                        _buildEditableTextField('Last Name', userData?['last_name'], () {
+                          _edit('last_name', userData?['last_name'] ?? '');
+                        }),
+                        const SizedBox(height: 10),
+
+                        // Username
+                        _buildReadOnlyTextField('Username', userData?['username']),
+                        const SizedBox(height: 10),
+
+                        // Email
+                        _buildReadOnlyTextField('Email', userData?['email']),
+                        const SizedBox(height: 10),
+
+                        // Phone Number
+                        _buildEditableTextField('Phone Number', userData?['phone_number'], () {
+                          _edit('phone_number', userData?['phone_numebr'] ?? '');
+                        }),                        
+                        const SizedBox(height: 20),
+
+                        // Return Button
+                        _buildActionButton('Return', () {
+                          Navigator.pop(context);
+                        }),
+
+                        const SizedBox(height: 20),
+
+                        // Change Password Button
+                        _buildActionButton('Change Password', () {
+                          // Handle password change
+                        }),
+                      ],
+                    ),
+                  ),
+
+                  // Vehicles Tab
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Select your default vehicle registration plate",
+                          style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 15),
+
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: vehicles.map((vehicle) {
+                            String registrationNumber = vehicle['registrationNumber'];
+                            bool isSelected = registrationNumber == defaultVehicle;
+                            return Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                ChoiceChip(
+                                  label: Column(
+                                    children: [
+                                      Text(
+                                        registrationNumber,
+                                        style: TextStyle(
+                                          color: isSelected ? Colors.white : Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        vehicle['type'],
+                                        style: TextStyle(
+                                          color: isSelected ? Colors.white : Colors.black54,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  selected: isSelected,
+                                  onSelected: (_) => _setDefaultVehicle(registrationNumber),
+                                  selectedColor: Colors.red,
+                                  backgroundColor: Colors.grey[200],
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.delete),
+                                  color: Colors.red,
+                                  onPressed: () {
+                                    _deleteVehicle(registrationNumber);
+                                  },
+                                ),
+                              ],
+                            );
+                          }).toList(),
+                        ),
+                        const SizedBox(height: 25),
+
+                        Text(
+                          "Choose vehicle type",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+
+                        DropdownButtonFormField<String>(
+                          value: selectedVehicleType,
+                          decoration: InputDecoration(
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          items: ['Car', 'Motorcycle', 'Van', 'Bus', 'Truck'].map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (newValue) {
+                            setState(() {
+                              selectedVehicleType = newValue!;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 20),
+
+                        Text(
+                          "Add your vehicle registration plate",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          decoration: InputDecoration(
+                            hintText: 'Enter registration plate',
+                            hintStyle: TextStyle(color: Colors.grey),
+                            filled: true,
+                            fillColor: Colors.grey[200],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              vehicleRegistration = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Default Vehicle Checkbox
+                        Row(
+                          children: [
+                            Checkbox(
+                              value: isDefault,
+                              onChanged: (bool? value) {
+                                setState(() {
+                                  isDefault = value!;
+                                });
+                              },
+                            ),
+                            Text("Set as default vehicle"),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        // Add Vehicle Button
+                        ElevatedButton(
+                          onPressed: () {
+                            _addVehicle(vehicleRegistration.trim(), isDefault);
+                          },
+                          child: Text('Add Vehicle'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+Widget _buildEditableTextField(String label, String? value, VoidCallback onEdit) {
+  return TextField(
+    readOnly: true,
+    decoration: InputDecoration(
+      labelText: label,
+      filled: true,
+      fillColor: Colors.grey[200],
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide.none,
+      ),
+      suffixIcon: IconButton(
+        icon: Icon(Icons.edit, color: Colors.red),
+        onPressed: onEdit,
+      ),
+    ),
+    controller: TextEditingController(text: value ?? ''),
+  );
 }
+
+  Widget _buildReadOnlyTextField(String label, String? value) {
+    return TextField(
+      readOnly: true,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.grey[200],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      controller: TextEditingController(text: value ?? ''),
+    );
+  }
+
+  Widget _buildActionButton(String label, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
+      ),
+      child: Text(
+        label,
+        style: 
+          TextStyle(
+            color: Colors.white,), 
+        ),
+    );
+  }
+}
+                      

@@ -53,7 +53,72 @@ class _MainPageState extends State<MainPage> {
       SnackBar(content: Text('Error signing out. Please try again.')),
     );
   }
+}
+
+  void _showPricingDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.red,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildPricingOption("Hourly", "RM 0.60"),
+              _buildPricingOption("Daily", "RM 5.00"),
+              _buildPricingOption("Weekly", "RM 23.00"),
+            ],
+          ),
+        );
+      },
+    );
   }
+
+    Widget _buildPricingOption(String title, String price) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context); // Close the dialog
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => LocationPage(), // Navigate to location page
+        //   ),
+        // );
+      },
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.symmetric(vertical: 15),
+        margin: EdgeInsets.symmetric(vertical: 5),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Column(
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              price,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.red,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -124,10 +189,9 @@ class _MainPageState extends State<MainPage> {
               ),
             ),
             SizedBox(height: 20),
+            
             GestureDetector(
-              onTap: () {
-                // Handle add new parking action
-              },
+              onTap: () => _showPricingDialog(context),
               child: Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(20),

@@ -23,20 +23,48 @@ class _SignUpPageState extends State<SignUpPage> {
     if (_formKey.currentState!.validate()) {
       try {
         // Check for existing email in Firestore
-        final QuerySnapshot result = await _firestore
+        final QuerySnapshot emailresult = await _firestore
             .collection('users')
             .where('email', isEqualTo: email)
             .get();
-
-        final List<DocumentSnapshot> documents = result.docs;
-
         // If the email already exists, show an error message
-        if (documents.isNotEmpty) {
+        if (emailresult.docs.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Email already exists. Please use another email.')),
+            SnackBar(
+              content: Text('Email already exists. Please use another email.'),
+              backgroundColor: Colors.red,
+              ),
           );
           return;
         }
+    
+      // Check if username already exists
+      final QuerySnapshot usernameResult = await _firestore
+          .collection('users')
+          .where('username', isEqualTo: username)
+          .get();
+      if (usernameResult.docs.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Username already exists. Please choose another username.'),
+          backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Check if phone number already exists
+      final QuerySnapshot phoneResult = await _firestore
+          .collection('users')
+          .where('phone_number', isEqualTo: phoneNumber)
+          .get();
+      if (phoneResult.docs.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Phone number already exists. Please use another phone number.'),
+          backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
 
         // Add user details to Firestore
         await _firestore.collection('users').add({
