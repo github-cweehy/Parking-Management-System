@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'paymentmethod.dart';
 import 'userprofile.dart'; 
 import 'login.dart'; 
 
@@ -19,6 +20,8 @@ class AddParkingPage extends StatefulWidget {
 
 class _AddParkingPageState extends State<AddParkingPage> {
   String username = '';
+  List<String> vehiclePlates = [];
+  String selectedPlate = '';
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
   TimeOfDay startTime = TimeOfDay(hour: 9, minute: 0);
@@ -30,6 +33,7 @@ class _AddParkingPageState extends State<AddParkingPage> {
   void initState() {
     super.initState();
     _fetchUsername();
+    _fetchVehiclePlates();
     _setInitialDatesAndPrice();
   }
 
@@ -46,6 +50,35 @@ class _AddParkingPageState extends State<AddParkingPage> {
       print("Error fetching username: $e");
     }
   }
+
+Future<void> _fetchVehiclePlates() async {
+  try {
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .get();
+        
+    // Get the list of vehicles from the user's data
+    List<dynamic> vehicleList = userDoc.data()?['vehicles'] ?? [];
+    List<String> plates = vehicleList.map<String>((vehicle) {
+    return vehicle['registrationNumber'] ?? '';
+    }).toList();
+
+    String defaultVehicle = userDoc.data()?['default_vehicle'] ?? '';
+
+
+    setState(() {
+      vehiclePlates = plates;
+      selectedPlate = defaultVehicle.isNotEmpty && plates.contains(defaultVehicle) 
+          ? defaultVehicle 
+          : plates.isNotEmpty 
+            ? plates.first 
+            : '';    });
+  } catch (e) {
+    print("Error fetching vehicle plates: $e");
+  }
+}
+
 
 
   void _setInitialDatesAndPrice() {
@@ -155,7 +188,6 @@ class _AddParkingPageState extends State<AddParkingPage> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat("d MMMM yyyy");
-    final timeFormat = DateFormat.jm();
 
     return Scaffold(
       appBar: AppBar(
@@ -215,7 +247,7 @@ class _AddParkingPageState extends State<AddParkingPage> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
-            // crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Location and Pricing Option
               Row(
@@ -277,6 +309,7 @@ class _AddParkingPageState extends State<AddParkingPage> {
                     ),
                   ),
                   SizedBox(width: 10),
+                  
                   // Start Time
                   Expanded(
                     child: GestureDetector(
@@ -313,19 +346,21 @@ class _AddParkingPageState extends State<AddParkingPage> {
                   // End Date
                   Expanded(
                     child: GestureDetector(
-                      onTap: widget.pricingOption == "Weekly" ? () => _selectDate(context, false) : null,
+                      onTap: widget.pricingOption == "Weekly" ? null : () => _selectDate(context, false),
                       child: AbsorbPointer(
                         child: TextField(
-                          decoration: InputDecoration(
-                            labelText: "Date",
-                            prefixIcon: Icon(Icons.calendar_today),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          controller: TextEditingController(text: dateFormat.format(endDate)),
-                          enabled: widget.pricingOption == "Weekly",
-                        ),
+                              readOnly:true,
+                              decoration: InputDecoration(
+                                labelText: "Date",
+                                filled: true,
+                                fillColor: Colors.grey[200],
+                                prefixIcon: Icon(Icons.access_time),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              controller: TextEditingController(text: dateFormat.format(endDate)),
+                            )
                       ),
                     ),
                   ),
@@ -348,20 +383,45 @@ class _AddParkingPageState extends State<AddParkingPage> {
                               ),
                             ),
                           )
-                        : widget.pricingOption == "Daily"
-                            ? Text(
-                                "17:00",
-                                style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                        : widget.pricingOption == "Daily" || widget.pricingOption == "Weekly"
+                            ? GestureDetector(
+                              child: AbsorbPointer(
+                                child: TextField(
+                                  readOnly:true,
+                                  decoration: InputDecoration(
+                                    labelText: "Time",
+                                    filled: true,
+                                    fillColor: Colors.grey[200],
+                                    prefixIcon: Icon(Icons.access_time),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  controller: TextEditingController(text: "05:00 PM"),
+                                ),
                               )
+                            )
                             : SizedBox(),
+                        
                   ),
                 ],
               ),
               SizedBox(height: 20),
 
               // Registration Plate
-              TextField(
-                controller: registrationController,
+              DropdownButtonFormField<String>(
+                value: selectedPlate,
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedPlate = newValue!;
+                  });
+                },
+                items: vehiclePlates.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
                 decoration: InputDecoration(
                   labelText: "Registration Plate",
                   prefixIcon: Icon(Icons.directions_car),
@@ -369,8 +429,9 @@ class _AddParkingPageState extends State<AddParkingPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
+                isExpanded: true,
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 40),
 
               // Price Display
               Row(
@@ -389,8 +450,12 @@ class _AddParkingPageState extends State<AddParkingPage> {
                       ),
                     ),
                     onPressed: () {
-                      // Handle parking addition
-                      // You can add validation and submission logic here
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PaymentMethodPage(userId: widget.userId, price:price),
+                        ),
+                      );
                     },
                     icon: Icon(Icons.add_circle, color: Colors.white),
                     label: Text(

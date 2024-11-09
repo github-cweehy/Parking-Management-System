@@ -78,47 +78,70 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
-    Widget _buildPricingOption(String title, String price) {
-    return GestureDetector(
-      onTap: () {
+Widget _buildPricingOption(String title, String price) {
+  return GestureDetector(
+    onTap: () async {
+      try {
+        // Save the pricing option to Firebase and get the document reference
+        DocumentReference docRef = await FirebaseFirestore.instance.collection('users parking selection').add({
+          'username': username,
+          'userID' : widget.userId,
+          'pricingOption': title,
+          'price': price,
+          'location': null,
+          'vehiclePlateNum': null,
+          'timestamp': Timestamp.now(),
+        });
+
+        // Fetch the document ID of the added document
+        String userparkingselectionID = docRef.id;
+
+        // Navigate to LocationPage with the document ID
         Navigator.pop(context); // Close the dialog
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => LocationPage(userId: title,pricingOption: title,), 
+            builder: (context) => LocationPage(
+              userId: widget.userId,
+              pricingOption: title,
+              userparkingselectionID: userparkingselectionID, // Pass the document ID
+            ),
           ),
         );
-      },
-      child: Container(
-        width: double.infinity,
-        padding: EdgeInsets.symmetric(vertical: 15),
-        margin: EdgeInsets.symmetric(vertical: 5),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              price,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.red,
-              ),
-            ),
-          ],
-        ),
+      } catch (e) {
+        print("Error saving pricing option: $e");
+      }
+    },
+    child: Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: 15),
+      margin: EdgeInsets.symmetric(vertical: 5),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
       ),
-    );
-  }
+      child: Column(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.red,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            price,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.red,
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
 
   @override

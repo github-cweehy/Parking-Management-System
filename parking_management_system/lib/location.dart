@@ -10,32 +10,15 @@ import 'addparking.dart';
 
 class LocationPage extends StatefulWidget {
   final String userId;
+  final String userparkingselectionID;
   final String pricingOption; 
-
-  LocationPage({required this.pricingOption, required this.userId});
+  
+  LocationPage({required this.pricingOption, required this.userId, required this.userparkingselectionID});
 
   @override
   _LocationPageState createState() => _LocationPageState();
 }
 
-  void _logout(BuildContext context) async{
-  try {
-    // Sign out from Firebase Authentication
-    await FirebaseAuth.instance.signOut();
-    
-    // Navigate to LoginPage and replace the current page
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => LoginPage()),
-    );
-  } catch (e) {
-    // Handle any errors that occur during sign-out
-    print("Error signing out: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error signing out. Please try again.')),
-    );
-  }
-}
 
 class _LocationPageState extends State<LocationPage> {
   String username = '';
@@ -57,13 +40,38 @@ class _LocationPageState extends State<LocationPage> {
           .collection('users')
           .doc(widget.userId)
           .get();
+    if (userDoc.exists) {
       setState(() {
-        username = userDoc.data()?['username'] ?? '';
+        username = userDoc.data()?['username'] ?? 'Username';
       });
+      print("Username fetched successfully: $username");
+    } else {
+      print("No document found for the given user ID.");
+    }
     } catch (e) {
       print("Error fetching username: $e");
     }
   }
+
+
+  void _logout(BuildContext context) async{
+  try {
+    // Sign out from Firebase Authentication
+    await FirebaseAuth.instance.signOut();
+    
+    // Navigate to LoginPage and replace the current page
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => LoginPage()),
+    );
+  } catch (e) {
+    // Handle any errors that occur during sign-out
+    print("Error signing out: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error signing out. Please try again.')),
+    );
+  }
+}
 
   Future<void> _determinePosition() async {
     bool serviceEnabled;
@@ -125,27 +133,40 @@ class _LocationPageState extends State<LocationPage> {
   }
 
   Future<void> _searchStreet(String streetName) async {
-    List<Location> locations = await locationFromAddress(streetName + ", Melaka");
+    List<Location> locations = await locationFromAddress("$streetName, Melaka");
     if (locations.isNotEmpty) {
       LatLng searchPosition = LatLng(locations.first.latitude, locations.first.longitude);
       _updateCurrentLocation(searchPosition);
     }
   }
 
-  void _confirmLocation() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AddParkingPage(
-          location: _currentStreet,
-          pricingOption: widget.pricingOption,
-          userId: widget.userId,
+  void _confirmLocation() async {
+    try {
+      // Use the userParkingSelectionID to update the correct document
+      DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
+          .collection('users parking selection')
+          .doc(widget.userparkingselectionID);  // Use the passed ID
+
+      await parkingSelectionDocRef.update({
+        'location': _currentStreet,  // Update location with the current street
+      });
+      print("Location saved successfully.");
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AddParkingPage(
+            location: _currentStreet,
+            pricingOption: widget.pricingOption,
+            userId: widget.userId,
+          ),
         ),
-      ),
-    );
+      );
+  } catch(e){
+    print("Error saving location: $e");
   }
-
-
+}
+  
 
   @override
   Widget build(BuildContext context) {
