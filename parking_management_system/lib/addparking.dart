@@ -10,9 +10,10 @@ import 'login.dart';
 class AddParkingPage extends StatefulWidget {
   final String userId;
   final String location;
+  final String userparkingselectionID;
   final String pricingOption;
 
-  AddParkingPage({required this.location, required this.pricingOption, required this.userId});
+  AddParkingPage({required this.userparkingselectionID, required this.location, required this.pricingOption, required this.userId});
 
   @override
   _AddParkingPageState createState() => _AddParkingPageState();
@@ -449,13 +450,32 @@ Future<void> _fetchVehiclePlates() async {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => PaymentMethodPage(userId: widget.userId, price:price),
-                        ),
-                      );
+                    onPressed: () async {
+                      try {
+                        // Use the userParkingSelectionID to update the correct document
+                        DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
+                            .collection('history parking')
+                            .doc(widget.userparkingselectionID);  // Use the passed ID
+
+                        await parkingSelectionDocRef.update({
+                          'vehiclePlateNum': selectedPlate,
+                          'price': price,
+                        });
+                        print("Data saved successfully.");
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PaymentMethodPage(
+                              userId: widget.userId, 
+                              price:price, 
+                              userparkingselectionID: widget.userparkingselectionID,
+                              ),
+                            ),
+                          );
+                      } catch(e){
+                        print("Error saving data: $e");
+                      }
                     },
                     icon: Icon(Icons.add_circle, color: Colors.white),
                     label: Text(

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'signup.dart';
 import 'mainpage.dart';
+import 'adminMainPage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -21,7 +22,33 @@ class _LoginPageState extends State<LoginPage> {
     String password = _passwordController.text.trim();
 
     try {
-      // Retrieve user document with matching username
+      // Search in 'admins' collection first
+      QuerySnapshot adminSnapshot = await _firestore
+          .collection('admins')
+          .where('admin_username', isEqualTo: username)
+          .get();
+
+      if (adminSnapshot.docs.isNotEmpty) {
+        var adminDoc = adminSnapshot.docs[0];
+        String storedPassword = adminDoc['password'];
+        String adminId = adminDoc.id;
+
+        if (storedPassword == password) {
+          // Navigate to the admin page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminMainPage(adminId: adminId),
+            ),
+          );
+          return; // Stop further execution
+        } else {
+          _showErrorDialog('Incorrect password');
+          return;
+        }
+      }
+
+      // Search in 'users' collection
       QuerySnapshot userSnapshot = await _firestore
           .collection('users')
           .where('username', isEqualTo: username)

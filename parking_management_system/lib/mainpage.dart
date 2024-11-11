@@ -83,11 +83,11 @@ Widget _buildPricingOption(String title, String price) {
     onTap: () async {
       try {
         // Save the pricing option to Firebase and get the document reference
-        DocumentReference docRef = await FirebaseFirestore.instance.collection('users parking selection').add({
+        DocumentReference docRef = await FirebaseFirestore.instance.collection('history parking').add({
           'username': username,
           'userID' : widget.userId,
-          'pricingOption': title,
-          'price': price,
+          'pricingOption': title, //selections
+          'price': price, //default
           'location': null,
           'vehiclePlateNum': null,
           'timestamp': Timestamp.now(),

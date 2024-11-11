@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parking_management_system/mainpage.dart';
 
 class CardPaymentPage extends StatefulWidget {
   final double price;
+  final String userId;
 
-  CardPaymentPage({required this.price});
+  CardPaymentPage({required this.price, required this.userId});
 
   @override
   State<CardPaymentPage> createState() => _CardPaymentPageState();
@@ -22,11 +25,44 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
     _cardNumberController.dispose();
     _expiryDateController.dispose();
     _cvcController.dispose();
-    _cardHolderNameController.dispose(); // Dispose of the new controller
+    _cardHolderNameController.dispose(); 
     super.dispose();
   }
 
+  Future<void> _saveTransactionToFirebase() async {
+  try {
+    // Generate unique ID for card payments (e.g., cp001, cp002, etc.)
+    CollectionReference transactions = FirebaseFirestore.instance.collection('transactions');
+    QuerySnapshot snapshot = await transactions.where(FieldPath.documentId, isGreaterThanOrEqualTo: 'cp001').get();
+    int idCounter = snapshot.size + 1;
+    String transactionId = 'cp${idCounter.toString().padLeft(3, '0')}';
 
+    await transactions.doc(transactionId).set({
+      'id': transactionId,
+      'cardHolderName': _cardHolderNameController.text,
+      'cardNumber': _cardNumberController.text,
+      'expiryDate': _expiryDateController.text,
+      'cvc': _cvcController.text,
+      'amount': widget.price,
+      'timestamp': FieldValue.serverTimestamp(),
+      'paymentMethod': 'Card',
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Transaction successfully')),
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => MainPage(userId: widget.userId)));
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Transaction failed')),
+    );}
+  }
+
+
+  //card number : 16-19 digits
   bool _validateCardNumber(String cardNumber) {
     cardNumber = cardNumber.replaceAll(RegExp(r'\s+'), ''); // Remove spaces
     if (!RegExp(r'^\d+$').hasMatch(cardNumber)) return false;
@@ -203,7 +239,11 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  onPressed: (){},
+                  onPressed: (){
+                    if (_formKey.currentState!.validate()) {
+                      _saveTransactionToFirebase();
+                    }
+                  },
                   child: Text(
                     'Confirm Payment : RM ${widget.price.toStringAsFixed(2)}',
                     style: TextStyle(
