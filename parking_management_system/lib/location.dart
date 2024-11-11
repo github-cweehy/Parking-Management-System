@@ -144,11 +144,11 @@ class _LocationPageState extends State<LocationPage> {
     try {
       // Use the userParkingSelectionID to update the correct document
       DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
-          .collection('users parking selection')
+          .collection('history parking')
           .doc(widget.userparkingselectionID);  // Use the passed ID
 
       await parkingSelectionDocRef.update({
-        'location': _currentStreet,  // Update location with the current street
+        'location': _currentStreet,
       });
       print("Location saved successfully.");
 
@@ -159,6 +159,7 @@ class _LocationPageState extends State<LocationPage> {
             location: _currentStreet,
             pricingOption: widget.pricingOption,
             userId: widget.userId,
+            userparkingselectionID: widget.userparkingselectionID,
           ),
         ),
       );

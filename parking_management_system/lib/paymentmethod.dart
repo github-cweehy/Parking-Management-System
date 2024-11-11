@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parking_management_system/onlinebanking.dart';
 import 'creditcard.dart';
 import 'userprofile.dart'; 
 import 'login.dart'; 
 
 class PaymentMethodPage extends StatefulWidget{
   final String userId;
+  final String userparkingselectionID;
   final double price;
 
-  PaymentMethodPage({required this.userId, required this.price});
+  PaymentMethodPage({required this.userparkingselectionID, required this.userId, required this.price});
 
   @override
   _PaymentMethodPageState createState() => _PaymentMethodPageState();
@@ -131,13 +133,27 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
             const SizedBox(height: 30),
 
             ElevatedButton(
-              onPressed: (){
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CardPaymentPage(price:widget.price),
-                  ),
-                );
+              onPressed: () async {
+                try {
+                  // Use the userParkingSelectionID to update the correct document
+                  DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
+                      .collection('history parking')
+                      .doc(widget.userparkingselectionID);  // Use the passed ID
+
+                  await parkingSelectionDocRef.update({
+                    'payment method': 'Card Payment',
+                  });
+                  print("Data saved successfully.");
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CardPaymentPage(price:widget.price, userId: widget.userId),
+                      ),
+                    );
+                } catch(e){
+                  print("Error saving data: $e");
+                }
               }, 
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -164,51 +180,107 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
               ),
             ),
             SizedBox(height: 40),
-            PaymentOptionButton(label: 'Credit Card       '),
+
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  // Use the userParkingSelectionID to update the correct document
+                  DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
+                      .collection('history parking')
+                      .doc(widget.userparkingselectionID);  // Use the passed ID
+
+                  await parkingSelectionDocRef.update({
+                    'payment method': 'Online Banking',
+                  });
+                  print("Data saved successfully.");
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OnlineBankingPage(),
+                      ),
+                    );
+                } catch(e){
+                  print("Error saving data: $e");
+                }
+              }, 
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text(
+                    "Online Banking",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                    ),
+                  ),
+                   Icon(
+                    Icons.chevron_right,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
             SizedBox(height: 40),
-            PaymentOptionButton(label: 'E-Wallet             '),
+
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  // Use the userParkingSelectionID to update the correct document
+                  DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
+                      .collection('history parking')
+                      .doc(widget.userparkingselectionID);  // Use the passed ID
+
+                  await parkingSelectionDocRef.update({
+                    'payment method': 'E-wallet',
+                  });
+                  print("Data saved successfully.");
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => OnlineBankingPage(),
+                      ),
+                    );
+                } catch(e){
+                  print("Error saving data: $e");
+                }
+              }, 
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Text(
+                    "E-wallet             ",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                    ),
+                  ),
+                   Icon(
+                    Icons.chevron_right,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
             SizedBox(height: 70),
             CancelButton(),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class PaymentOptionButton extends StatelessWidget {
-  final String label;
-
-  const PaymentOptionButton({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.red, 
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-        padding: EdgeInsets.symmetric(vertical: 16),
-      ),
-      onPressed: () {
-        // Add your onPressed logic here
-      },
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-            ),
-          ),
-          Icon(
-            Icons.chevron_right,
-            color: Colors.white,
-          ),
-        ],
       ),
     );
   }
