@@ -1,20 +1,17 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-void main() {
-  runApp(MyApp());
-}
 
-class MyApp extends StatelessWidget {
+class AdminMainPage extends StatefulWidget {
+  final String adminId;
+
+  AdminMainPage({required this.adminId});
+  
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: AdminMainPage(),
-    );
-  }
+  State<AdminMainPage> createState() => _AdminMainPageState();
 }
 
-class AdminMainPage extends StatelessWidget {
+class _AdminMainPageState extends State<AdminMainPage> {
   final String username = 'Admin';
 
   @override
