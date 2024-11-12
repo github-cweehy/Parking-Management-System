@@ -161,7 +161,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
           int index = entry.key;
           Map<String, dynamic> rate = entry.value;
           return ListTile(
-            leading: Icon(Icons.access_time, color: Colors.red),
+            leading: Icon(Icons.access_time, color: Colors.white),
             title: Row(
               children: [
                 Expanded(child: Text('${rate['duration']}')),
