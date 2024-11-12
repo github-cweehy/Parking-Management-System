@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parking_management_system/eWallet.dart';
 import 'package:parking_management_system/onlinebanking.dart';
 import 'creditcard.dart';
 import 'userprofile.dart'; 
@@ -246,7 +247,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OnlineBankingPage(price:widget.price, userId: widget.userId),
+                      builder: (context) => EWalletPaymentPage(price:widget.price, userId: widget.userId),
                       ),
                     );
                 } catch(e){
