@@ -143,12 +143,6 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
                     borderSide: BorderSide.none,
                   ),
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the name on the card';
-                  }
-                  return null;
-                },
               ),
               SizedBox(height: 20),
 

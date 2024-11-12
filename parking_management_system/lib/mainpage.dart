@@ -234,7 +234,7 @@ Widget _buildParkingHistoryCard(Map<String, dynamic> parkingData) {
             Icon(Icons.access_time, color: Colors.red),
             SizedBox(width: 10),
             Text(
-              '$startDate ' + parkingData['startTime'] + '\n' + '$endDate ' + parkingData['endTime'], // Placeholder timing
+              '${parkingData['startTime'] ?? ''}\n${parkingData['endTime'] ?? ''}',          
               style: TextStyle(fontSize: 16),
             ),
             Spacer(),

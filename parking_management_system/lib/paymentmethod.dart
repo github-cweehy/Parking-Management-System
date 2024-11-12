@@ -197,7 +197,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OnlineBankingPage(),
+                      builder: (context) => OnlineBankingPage(price:widget.price, userId: widget.userId),
                       ),
                     );
                 } catch(e){
@@ -246,7 +246,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OnlineBankingPage(),
+                      builder: (context) => OnlineBankingPage(price:widget.price, userId: widget.userId),
                       ),
                     );
                 } catch(e){

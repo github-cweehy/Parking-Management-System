@@ -452,6 +452,10 @@ Future<void> _fetchVehiclePlates() async {
                     ),
                     onPressed: () async {
                       try {
+
+                        DateTime startDateTime = DateTime(startDate.year, startDate.month, startDate.day, startTime.hour, startTime.minute);
+                        DateTime endDateTime = DateTime(endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
+
                         // Use the userParkingSelectionID to update the correct document
                         DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
                             .collection('history parking')
@@ -460,10 +464,8 @@ Future<void> _fetchVehiclePlates() async {
                         await parkingSelectionDocRef.update({
                           'vehiclePlateNum': selectedPlate,
                           'price': price,
-                          'startDate': Timestamp.fromDate(startDate),
-                          'endDate': Timestamp.fromDate(endDate),
-                          'startTime': startTime,
-                          'endTime': endTime,
+                          'startTime': startDateTime.toString(),
+                          'endTime': endDateTime.toString(),
                         });
                         print("Data saved successfully.");
 
