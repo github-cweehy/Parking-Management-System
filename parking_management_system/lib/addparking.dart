@@ -460,6 +460,10 @@ Future<void> _fetchVehiclePlates() async {
                         await parkingSelectionDocRef.update({
                           'vehiclePlateNum': selectedPlate,
                           'price': price,
+                          'startDate': Timestamp.fromDate(startDate),
+                          'endDate': Timestamp.fromDate(endDate),
+                          'startTime': startTime,
+                          'endTime': endTime,
                         });
                         print("Data saved successfully.");
 
