@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parking_management_system/receipt.dart';
+import 'mainpage.dart';
 import 'userprofile.dart';
 import 'login.dart';
 
@@ -50,11 +51,13 @@ class _HistoryPageState extends State<HistoryPage> {
             appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.black),
-          onPressed: () {
-            // Handle menu press
-          },
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: Colors.black),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
         ),
         title: Image.asset(
           'assets/logomelaka.jpg', 
@@ -100,10 +103,103 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ],
       ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.red,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/logomelaka.jpg',
+                    height: 60,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Melaka Parking',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.home, color: Colors.red),
+              title: Text('Home Page', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(
+                      userId: widget.userId,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.history, color: Colors.red),
+              title: Text('History', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HistoryPage(
+                      userId: widget.userId,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.favorite, color: Colors.red),
+              title: Text('Favourite', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HistoryPage(
+                      userId: widget.userId,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _fetchParkingHistory(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) return CircularProgressIndicator();
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            // Display a card when there is no history available
+            return Center(
+              child: Card(
+                margin: EdgeInsets.all(20),
+                color: Colors.red,
+                child: Padding(
+                  padding: const EdgeInsets.all(30.0),
+                  child: 
+                  Text(
+                    'No history available.',
+                    style: TextStyle(fontSize: 18, color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            );
+          }
+
           final historyDocs = snapshot.data!.docs;
 
           return ListView.builder(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:parking_management_system/history.dart';
 import 'userprofile.dart'; 
 import 'login.dart'; 
 import 'location.dart';
@@ -262,77 +263,150 @@ Widget _buildParkingHistoryCard(Map<String, dynamic> parkingData) {
 }
 
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leading: Builder(
+        builder: (context) => IconButton(
           icon: Icon(Icons.menu, color: Colors.black),
           onPressed: () {
-            // Handle menu press
+            Scaffold.of(context).openDrawer();
           },
         ),
-        title: Image.asset(
-          'assets/logomelaka.jpg', 
-          height: 60,
-        ),
-        centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<String>(
-              underline: SizedBox(),
-              icon: Row(
-                children: [
-                  Text(
-                    username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
-                ],
-              ),
-              items: <String>['Profile', 'Logout'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? value) {
-                if (value == 'Profile') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserProfilePage(userId: widget.userId),
-                    ),
-                  );
-                } else if (value == 'Logout') {
-                  _logout(context);
-                }
-              },
+      ),
+      title: Image.asset(
+        'assets/logomelaka.jpg', 
+        height: 60,
+      ),
+      centerTitle: true,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: DropdownButton<String>(
+            underline: SizedBox(),
+            icon: Row(
+              children: [
+                Text(
+                  username,
+                  style: TextStyle(color: Colors.black),
+                ),
+                Icon(
+                  Icons.arrow_drop_down,
+                  color: Colors.black,
+                ),
+              ],
             ),
+            items: <String>['Profile', 'Logout'].map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (String? value) {
+              if (value == 'Profile') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => UserProfilePage(userId: widget.userId),
+                  ),
+                );
+              } else if (value == 'Logout') {
+                _logout(context);
+              }
+            },
+          ),
+        ),
+      ],
+    ),
+    // Add the drawer here
+    drawer: Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.red,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/logomelaka.jpg',
+                  height: 60,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Melaka Parking',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.home, color: Colors.red),
+            title: Text('Home Page', style: TextStyle(color: Colors.red)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MainPage(
+                    userId: widget.userId,
+                  ),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: Colors.red),
+            title: Text('History', style: TextStyle(color: Colors.red)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HistoryPage(
+                    userId: widget.userId,
+                  ),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.favorite, color: Colors.red),
+            title: Text('Favourite', style: TextStyle(color: Colors.red)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => HistoryPage(
+                    userId: widget.userId,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your Parking',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+    ),
+    body: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Parking',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
             ),
-            SizedBox(height: 20),
-
-            parkingHistory.isEmpty
+          ),
+          SizedBox(height: 20),
+          parkingHistory.isEmpty
               ? Center(child: Text(''))
               : ListView.builder(
                   shrinkWrap: true,  // Ensures the ListView only takes as much space as it needs
@@ -341,42 +415,42 @@ Widget _buildParkingHistoryCard(Map<String, dynamic> parkingData) {
                     return _buildParkingHistoryCard(parkingHistory[index]);
                   },
                 ),
-
-            GestureDetector(
-              onTap: () => _showPricingDialog(context),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.directions_car, color: Colors.white, size: 50),
-                    SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add, color: Colors.white, size: 20),
-                        SizedBox(width: 10),
-                        Text(
-                          'Add New Parking',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
+          GestureDetector(
+            onTap: () => _showPricingDialog(context),
+            child: Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.directions_car, color: Colors.white, size: 50),
+                  SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.add, color: Colors.white, size: 20),
+                      SizedBox(width: 10),
+                      Text(
+                        'Add New Parking',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 }
