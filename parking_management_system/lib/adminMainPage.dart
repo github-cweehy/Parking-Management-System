@@ -1,5 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:parking_management_system/adminEditParkingSelection.dart';
+import 'package:parking_management_system/adminPSHistory.dart';
+import 'package:parking_management_system/adminPackagesBought.dart';
 
 
 class AdminMainPage extends StatefulWidget {
@@ -12,7 +16,48 @@ class AdminMainPage extends StatefulWidget {
 }
 
 class _AdminMainPageState extends State<AdminMainPage> {
-  final String username = 'Admin';
+  String admin_username = '';
+
+  @override
+  void initState(){
+    super.initState();
+    _fetchUsername();
+  }
+
+  Future<void> _fetchUsername() async{
+    try{
+      final adminDoc = await FirebaseFirestore.instance
+
+        .collection('admins')
+        .doc(widget.adminId)
+        .get();
+      
+      setState(() {
+        admin_username = adminDoc.data()?['admin_username']?? 'Admin Username';
+      });
+    }catch(e){
+      print("Error fetching admin username: $e");
+    }
+  }
+
+  void _logout(BuildContext context) async{
+    try{
+      //Sign out from firebase authentication
+      await FirebaseAuth.instance.signOut();
+
+      //Navigate to LoginPage and replace current page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    }catch(e){
+      //Handle any errors that occur during sign-out
+      print("Error sign out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sign out. Please try again')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +86,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
               icon: Row(
                 children: [
                   Text(
-                    username,
+                    admin_username,
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(
@@ -58,7 +103,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
               }).toList(),
               onChanged: (String? value) {
                 if (value == 'Profile') {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                       builder: (context) => AdminProfilePage(),
@@ -86,6 +131,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   text: 'Edit Parking Selection',
                   onTap: () {
                     // Handle Edit Parking Selection tap
+                    Navigator.pushReplacement(
+                      context, 
+                      MaterialPageRoute(
+                        builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
+                      ),
+                    );
                   },
                 ),
                 OptionItem(
@@ -93,6 +144,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   text: 'Parking Selection History',
                   onTap: () {
                     // Handle Parking Selection History tap
+                    Navigator.pushReplacement(
+                      context, 
+                      MaterialPageRoute(
+                        builder: (context) => ParkingSelectionHistoryPage(),
+                      ),
+                    );
                   },
                 ),
                 OptionItem(
@@ -115,6 +172,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   text: 'Edit Packages Bought',
                   onTap: () {
                     // Handle Edit Packages Bought tap
+                     Navigator.push(
+                      context, 
+                      MaterialPageRoute(
+                        builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
+                      ),
+                    );
                   },
                 ),
                 OptionItem(
@@ -138,24 +201,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
         ),
       ),
     );
-  }
-
-  void _logout(BuildContext context) async {
-    try {
-      // Sign out from Firebase Authentication
-      await FirebaseAuth.instance.signOut();
-      // Navigate to LoginPage and replace the current page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    } catch (e) {
-      // Handle any errors that occur during sign-out
-      print("Error signing out: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error Signing out. Please try again.')),
-      );
-    }
   }
 }
 
