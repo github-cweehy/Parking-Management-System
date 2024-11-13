@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:parking_management_system/eWallet.dart';
 import 'package:parking_management_system/onlinebanking.dart';
 import 'creditcard.dart';
+import 'history.dart';
+import 'mainpage.dart';
 import 'userprofile.dart'; 
 import 'login.dart'; 
 
@@ -66,11 +69,13 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.black),
-          onPressed: () {
-            // Handle menu press
-          },
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(Icons.menu, color: Colors.black),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
         ),
         title: Image.asset(
           'assets/logomelaka.jpg', 
@@ -116,7 +121,78 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
           ),
         ],
       ),
-      
+      // Add the drawer here
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            DrawerHeader(
+              decoration: BoxDecoration(
+                color: Colors.red,
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset(
+                    'assets/logomelaka.jpg',
+                    height: 60,
+                  ),
+                  SizedBox(height: 10),
+                  Text(
+                    'Melaka Parking',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: Icon(Icons.home, color: Colors.red),
+              title: Text('Home Page', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(
+                      userId: widget.userId,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.history, color: Colors.red),
+              title: Text('History', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HistoryPage(
+                      userId: widget.userId,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.favorite, color: Colors.red),
+              title: Text('Favourite', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HistoryPage(
+                      userId: widget.userId,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
       body: Padding(
         padding: EdgeInsets.all(20.0),
         child: 
@@ -197,7 +273,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OnlineBankingPage(),
+                      builder: (context) => OnlineBankingPage(price:widget.price, userId: widget.userId),
                       ),
                     );
                 } catch(e){
@@ -246,7 +322,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OnlineBankingPage(),
+                      builder: (context) => EWalletPaymentPage(price:widget.price, userId: widget.userId),
                       ),
                     );
                 } catch(e){
@@ -278,7 +354,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
               ),
             ),
             SizedBox(height: 70),
-            CancelButton(),
+            CancelButton(userParkingSelectionID: widget.userparkingselectionID, userId: widget.userId),
           ],
         ),
       ),
@@ -287,6 +363,11 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
 }
 
 class CancelButton extends StatelessWidget {
+  final String userParkingSelectionID;
+  final String userId;
+
+  CancelButton({required this.userParkingSelectionID, required this.userId});
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -300,8 +381,29 @@ class CancelButton extends StatelessWidget {
             ),
             padding: EdgeInsets.symmetric(vertical: 10),
           ),
-          onPressed: () {
-            Navigator.pop(context);
+          onPressed: () async {
+            try {
+              // Delete the document from Firestore
+              await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(userParkingSelectionID)
+                  .delete();
+
+              print("Document deleted successfully.");
+
+              // Navigate back to the main page
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MainPage(userId: userId),
+                ),
+              );
+            } catch (e) {
+              print("Error deleting document: $e");
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error canceling payment. Please try again.')),
+              );
+            }
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

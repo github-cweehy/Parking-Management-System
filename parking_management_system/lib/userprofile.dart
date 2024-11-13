@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parking_management_system/favourite.dart';
+import 'history.dart';
+import 'mainpage.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
@@ -227,6 +230,78 @@ void _showSnackBar(String message) {
               ),
             ),
           ],
+        ),
+        // Add the drawer here
+        drawer: Drawer(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              DrawerHeader(
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      'assets/logomelaka.jpg',
+                      height: 60,
+                    ),
+                    SizedBox(height: 10),
+                    Text(
+                      'Melaka Parking',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ListTile(
+                leading: Icon(Icons.home, color: Colors.red),
+                title: Text('Home Page', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MainPage(
+                        userId: widget.userId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.history, color: Colors.red),
+                title: Text('History', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HistoryPage(
+                        userId: widget.userId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.favorite, color: Colors.red),
+                title: Text('Favourite', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FavouritePage(
+                        userId: widget.userId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
         body: Column(
           children: [
