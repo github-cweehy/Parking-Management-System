@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parking_management_system/receipt.dart';
+import 'package:parking_management_system/favourite.dart';
+import 'receipt.dart';
 import 'mainpage.dart';
 import 'userprofile.dart';
 import 'login.dart';
@@ -48,7 +49,7 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-            appBar: AppBar(
+      appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         leading: Builder(
@@ -164,7 +165,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => HistoryPage(
+                    builder: (context) => FavouritePage(
                       userId: widget.userId,
                     ),
                   ),

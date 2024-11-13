@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:parking_management_system/history.dart';
+import 'favourite.dart';
+import 'history.dart';
 import 'userprofile.dart'; 
 import 'login.dart'; 
 import 'location.dart';
@@ -321,7 +322,7 @@ Widget build(BuildContext context) {
         ),
       ],
     ),
-    // Add the drawer here
+    // Navigation Side Bar
     drawer: Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -383,7 +384,7 @@ Widget build(BuildContext context) {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => HistoryPage(
+                  builder: (context) => FavouritePage(
                     userId: widget.userId,
                   ),
                 ),

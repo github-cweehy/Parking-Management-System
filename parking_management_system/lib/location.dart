@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parking_management_system/favourite.dart';
 import 'history.dart';
 import 'mainpage.dart';
 import 'userprofile.dart'; 
@@ -290,7 +291,7 @@ class _LocationPageState extends State<LocationPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => HistoryPage(
+                    builder: (context) => FavouritePage(
                       userId: widget.userId,
                     ),
                   ),

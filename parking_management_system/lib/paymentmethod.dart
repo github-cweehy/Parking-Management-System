@@ -354,7 +354,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
               ),
             ),
             SizedBox(height: 70),
-            CancelButton(),
+            CancelButton(userParkingSelectionID: widget.userparkingselectionID, userId: widget.userId),
           ],
         ),
       ),
@@ -363,6 +363,11 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
 }
 
 class CancelButton extends StatelessWidget {
+  final String userParkingSelectionID;
+  final String userId;
+
+  CancelButton({required this.userParkingSelectionID, required this.userId});
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -376,8 +381,29 @@ class CancelButton extends StatelessWidget {
             ),
             padding: EdgeInsets.symmetric(vertical: 10),
           ),
-          onPressed: () {
-            Navigator.pop(context);
+          onPressed: () async {
+            try {
+              // Delete the document from Firestore
+              await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(userParkingSelectionID)
+                  .delete();
+
+              print("Document deleted successfully.");
+
+              // Navigate back to the main page
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MainPage(userId: userId),
+                ),
+              );
+            } catch (e) {
+              print("Error deleting document: $e");
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error canceling payment. Please try again.')),
+              );
+            }
           },
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

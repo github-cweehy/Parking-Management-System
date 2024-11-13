@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parking_management_system/favourite.dart';
 import 'history.dart';
 import 'mainpage.dart';
 
@@ -292,7 +293,7 @@ void _showSnackBar(String message) {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => HistoryPage(
+                      builder: (context) => FavouritePage(
                         userId: widget.userId,
                       ),
                     ),
