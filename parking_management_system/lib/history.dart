@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parking_management_system/favourite.dart';
+import 'favourite.dart';
 import 'receipt.dart';
 import 'mainpage.dart';
 import 'userprofile.dart';
@@ -17,34 +17,33 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   String username = '';
 
-  Stream<QuerySnapshot> _fetchParkingHistory() {
-    return FirebaseFirestore.instance
+  // Fetch history records from `history parking` collection where `userId` field matches
+  Future<List<Map<String, dynamic>>> _fetchUserHistory() async {
+    final querySnapshot = await FirebaseFirestore.instance
         .collection('history parking')
-        .where('userId', isEqualTo: widget.userId)
-        .snapshots();
+        .where('userID', isEqualTo: widget.userId)
+        .get();
+
+    return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
   }
 
-  void _logout(BuildContext context) async{
-  try {
-    // Sign out from Firebase Authentication
-    await FirebaseAuth.instance.signOut();
-    
-    // Navigate to LoginPage and replace the current page
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => LoginPage()),
-    );
-  } catch (e) {
-    // Handle any errors that occur during sign-out
-    print("Error signing out: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error signing out. Please try again.')),
-    );
+  void _logout(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    } catch (e) {
+      print("Error signing out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out. Please try again.')),
+      );
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -61,7 +60,7 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ),
         title: Image.asset(
-          'assets/logomelaka.jpg', 
+          'assets/logomelaka.jpg',
           height: 60,
         ),
         centerTitle: true,
@@ -137,9 +136,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => MainPage(
-                      userId: widget.userId,
-                    ),
+                    builder: (context) => MainPage(userId: widget.userId),
                   ),
                 );
               },
@@ -151,9 +148,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => HistoryPage(
-                      userId: widget.userId,
-                    ),
+                    builder: (context) => HistoryPage(userId: widget.userId),
                   ),
                 );
               },
@@ -165,9 +160,7 @@ class _HistoryPageState extends State<HistoryPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => FavouritePage(
-                      userId: widget.userId,
-                    ),
+                    builder: (context) => FavouritePage(userId: widget.userId),
                   ),
                 );
               },
@@ -175,23 +168,21 @@ class _HistoryPageState extends State<HistoryPage> {
           ],
         ),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _fetchParkingHistory(),
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _fetchUserHistory(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            // Display a card when there is no history available
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return Center(
               child: Card(
                 margin: EdgeInsets.all(20),
                 color: Colors.red,
                 child: Padding(
                   padding: const EdgeInsets.all(30.0),
-                  child: 
-                  Text(
+                  child: Text(
                     'No history available.',
                     style: TextStyle(fontSize: 18, color: Colors.white),
                     textAlign: TextAlign.center,
@@ -201,7 +192,7 @@ class _HistoryPageState extends State<HistoryPage> {
             );
           }
 
-          final historyDocs = snapshot.data!.docs;
+          final historyDocs = snapshot.data!;
 
           return ListView.builder(
             itemCount: historyDocs.length,
@@ -214,40 +205,117 @@ class _HistoryPageState extends State<HistoryPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        data['location'],
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, color: Colors.red),
+                          SizedBox(width: 20),
+                          Text(
+                            data['location'] ?? 'Unknown location',
+                            style: TextStyle(
+                              fontSize: 18, 
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green),
+                          ),
+                          SizedBox(width: 240),
+                          Container(
+                            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.green[400],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              data['pricingOption'],
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        "${data['startTime']} - ${data['endTime']}",
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        "RM ${data['amount']}",
-                        style: TextStyle(fontSize: 16, color: Colors.black),
-                      ),
-                      SizedBox(height: 4),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ReceiptPage(
-                                district: data['district'],
-                                startTime: data['startTime'],
-                                endTime: data['endTime'],
-                                amount: data['amount'],
-                                type: data['type'],
+                      SizedBox(height: 10),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.access_time, color: Colors.red),
+                              SizedBox(width: 10),
+                              Column(
+                                children: [
+                                  Text(
+                                    "Start: ${data['startTime']}",
+                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                  ),
+                                  Text(
+                                    "End  : ${data['endTime']}",
+                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                  )
+                                ],
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[800],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              data['vehiclePlateNum'],
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.white,
                               ),
                             ),
-                          );
-                        },
-                        child: Text('Receipt'),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Icon(Icons.price_change, color: Colors.red),
+                          SizedBox(width: 10),
+                          Text(
+                            "RM ${data['price']}",
+                            style: TextStyle(fontSize: 16, color: Colors.black),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 25),
+                      Center(
+                        child: 
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReceiptPage(
+                                  district: data['location'] ?? 'Unknown location',
+                                  startTime: data['startTime'] ?? 'N/A',
+                                  endTime: data['endTime'] ?? 'N/A',
+                                  amount: data['price'] ?? 0,
+                                  type: data['type'] ?? 'N/A',
+                                ),
+                              ),
+                            );
+                          },
+                          child: Container(
+                            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                              child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.save_alt, color: Colors.white),
+                                Text(
+                                  'Receipt',
+                                  style: TextStyle(fontSize: 16, color: Colors.white)
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

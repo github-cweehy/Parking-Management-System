@@ -167,6 +167,8 @@ Widget _buildPricingOption(String title, String price) {
 
 Widget _buildParkingHistoryCard(Map<String, dynamic> parkingData) {
 
+  bool isFavourite = parkingData['isFavourite'] ?? false;
+
   // Retrieve start and end dates as Timestamps from the Firestore document
   Timestamp? startDateTimestamp = parkingData['startDate'];
   Timestamp? endDateTimestamp = parkingData['endDate'];
@@ -248,11 +250,36 @@ Widget _buildParkingHistoryCard(Map<String, dynamic> parkingData) {
         ),
         SizedBox(height: 20),
         OutlinedButton.icon(
-          onPressed: () {
-            // Add your logic for adding to favorites
+          onPressed: () async {
+            try {
+              // Toggle the favourite state
+              setState(() {
+                isFavourite = !isFavourite;
+              });
+
+              // Save to Firestore 'favourite' collection
+              await FirebaseFirestore.instance.collection('favourite').add({
+                'userID': widget.userId,
+                'location': parkingData['location'],
+                'pricingOption': parkingData['pricingOption'],
+                'vehiclePlateNum': parkingData['vehiclePlateNum'],
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(isFavourite ? 'Added to Favourites' : 'Removed from Favourites')),
+              );
+            } catch (e) {
+              print("Error adding to favourites: $e");
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error adding to favourites.')),
+              );
+            }
           },
-          icon: Icon(Icons.star_border, color: Colors.black),
-          label: Text('Add to Favorites'),
+          icon: Icon(
+            isFavourite ? Icons.star : Icons.star_border,
+            color: Colors.black,
+          ),
+          label: Text(isFavourite ? 'Remove from Favorites' : 'Add to Favorites'),
           style: OutlinedButton.styleFrom(
             minimumSize: Size(double.infinity, 40),
             side: BorderSide(color: Colors.black),
