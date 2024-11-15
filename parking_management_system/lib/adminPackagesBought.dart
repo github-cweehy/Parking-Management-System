@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:parking_management_system/adminProfile.dart';
 
 class EditPackagesBoughtPage extends StatefulWidget {
   final String adminId;
@@ -12,26 +14,71 @@ class EditPackagesBoughtPage extends StatefulWidget {
 
 class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   List<Map<String, dynamic>> monthlyRates = [];
-  String username = "Username"; // Placeholder for the username
+  String admin_username = ''; 
 
   @override
-  void initState() {
+  void initState() { 
     super.initState();
     _fetchRatesFromFirebase();
+    _fetchAdminUsername();
   }
 
-  // Fetch data from Firebase
+  //Fetch admin username from firebase
+  void _fetchAdminUsername() async {
+  try {
+    DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
+    if (snapshot.exists && snapshot.data() != null) {
+      setState(() {
+        admin_username = snapshot['admin_username'];  
+      });
+    }
+  } catch (e) {
+    print("Error fetching admin username: $e");
+  }
+}
+
+  // Fetch rates data from Firebase
   void _fetchRatesFromFirebase() async {
-    DocumentSnapshot snapshot = await _firestore.collection('packagesRates').doc('rates').get();
+  DocumentSnapshot snapshot = await _firestore.collection('packagesRates').doc('monthlyRates').get();
+  
+  if (snapshot.exists) {
     setState(() {
-      monthlyRates = List<Map<String, dynamic>>.from(snapshot['monthlyRates']);
+      monthlyRates = [
+        {'duration': '1 Month', 'price': snapshot['1 Month']},
+        {'duration': '3 Months', 'price': snapshot['3 Months']},
+        {'duration': '6 Months', 'price': snapshot['6 Months']},
+      ];
     });
+  } else {
+    print("Document not found!");
+  }
+}
+
+  //logout
+  void _logout(BuildContext context) async{
+    try{
+      //Sign out from firebase authentication
+      await FirebaseAuth.instance.signOut();
+
+      //Navigate to LoginPage and replace current page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    }catch(e){
+      //Handle any errors that occur during sign-out
+      print("Error sign out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sign out. Please try again')),
+      );
+    }
   }
 
   // Save changes to Firebase
   void saveChanges() async {
-    await _firestore.collection('packagesRates').doc('rates').set({
+    await _firestore.collection('packagesRates').doc('monthlyRates').update({
       'monthlyRates': monthlyRates,
     });
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Price saved successfully!')));
@@ -64,7 +111,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               icon: Row(
                 children: [
                   Text(
-                    username,
+                    admin_username,
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(
@@ -73,7 +120,6 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                   ),
                 ],
               ),
-
               items: <String>['Profile', 'Logout'].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -82,10 +128,16 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               }).toList(),
               onChanged: (String? value) {
                 // Handle dropdown selection
-                if (value == 'Logout') {
-                  // Implement logout
-                } else if (value == 'Profile') {
+                if (value == 'Profile') {
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                    ),
+                  );
+                } else if (value == 'Logout') {
                   // Navigate to profile
+                  _logout(context);
                 }
               },
             ),
@@ -98,8 +150,16 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+             IconButton(
+              icon: Icon(Icons.arrow_back_ios, color: Colors.black), // 返回按钮
+              onPressed: () {
+                Navigator.pop(context); 
+              },
+            ),
+            SizedBox(width: 10),
+
             Text(
-              "Edit Packages",
+              "Edit Packages Boughth",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             SizedBox(height: 16),
@@ -143,6 +203,17 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// Placeholder for LoginPage widget
+class LoginPage extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Login Page')),
+      body: Center(child: Text('Login Page Content')),
     );
   }
 }

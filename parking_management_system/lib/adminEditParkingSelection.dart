@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:parking_management_system/adminMainPage.dart';
 import 'package:parking_management_system/adminProfile.dart';
 
 class EditParkingSelectionPage extends StatefulWidget {
@@ -89,7 +90,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
               icon: Row(
                 children: [
                   Text(
-                    'Username', // 替换为实际用户名变量
+                    'admin_username', // 替换为实际用户名变量
                     style: TextStyle(color: Colors.black),
                   ),
                 ],
@@ -106,7 +107,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                      builder: (context) => AdminMainPage(adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {

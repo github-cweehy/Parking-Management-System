@@ -38,7 +38,7 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => AdminMainPage(adminId: adminId),
+              builder: (context) => AdminMainPage(adminId: adminId)
             ),
           );
           return; // Stop further execution

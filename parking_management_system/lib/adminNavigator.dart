@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:parking_management_system/adminMainPage.dart';
 
 class AdminNavigator extends StatelessWidget{
   @override
@@ -18,6 +19,9 @@ class AdminNavigator extends StatelessWidget{
         ),
         centerTitle: true,
       ),
+
+      drawer: DrawerMenu(),
+      body: Center(child: Text("Admin Main Page Content")),
     );
   }
 }
@@ -40,6 +44,10 @@ class DrawerMenu extends StatelessWidget{
             ),
             onTap: () {
               //Navigator to Admin Profile Page
+              Navigator.push(
+                context, 
+                MaterialPageRoute(builder: (context) => AdminProfilePage()),
+              );
             },
           ),
 
