@@ -195,8 +195,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
       ),
       body: Padding(
         padding: EdgeInsets.all(20.0),
-        child: 
-        Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(

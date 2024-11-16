@@ -18,7 +18,25 @@ class HistoryPage extends StatefulWidget {
 
 class _HistoryPageState extends State<HistoryPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String username = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUsername();
+  }
+
+  Future<void> _fetchUsername() async {
+    try {
+      final userDoc = await _firestore.collection('users').doc(widget.userId).get();
+      setState(() {
+        username = userDoc.data()?['username'] ?? 'Username';
+      });
+    } catch (e) {
+      print("Error fetching username: $e");
+    }
+  }
 
   // Fetch history records from `history parking` collection where `userId` field matches
   Future<List<Map<String, dynamic>>> _fetchUserHistory() async {
@@ -210,7 +228,7 @@ class _HistoryPageState extends State<HistoryPage> {
                           Icon(Icons.location_on, color: Colors.red),
                           SizedBox(width: 20),
                           Text(
-                            data['location'] ?? 'Unknown location',
+                            data['location'],
                             style: TextStyle(
                               fontSize: 18, 
                               fontWeight: FontWeight.bold,

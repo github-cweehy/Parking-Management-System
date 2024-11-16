@@ -5,6 +5,7 @@ import 'history.dart';
 import 'mainpage.dart';
 import 'userprofile.dart';
 import 'login.dart';
+import 'addparking.dart';
 
 class FavouritePage extends StatefulWidget {
   final String userId;
@@ -16,38 +17,34 @@ class FavouritePage extends StatefulWidget {
 }
 
 class _FavouritePageState extends State<FavouritePage> {
-  String username = '';
   final CollectionReference favouritesCollection = FirebaseFirestore.instance.collection('favourite');
-  List<Map<String, dynamic>> favourites = [];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+  String username = '';
 
   @override
   void initState() {
     super.initState();
-    fetchFavourites();
+    _fetchUsername();
   }
 
-  void fetchFavourites() async {
+  Future<void> _fetchUsername() async {
     try {
-      final snapshot = await favouritesCollection.where('userId', isEqualTo: widget.userId).get();
+      final userDoc = await _firestore.collection('users').doc(widget.userId).get();
       setState(() {
-        favourites = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+        username = userDoc.data()?['username'] ?? 'Username';
       });
     } catch (e) {
-      print("Error fetching favourites: $e");
+      print("Error fetching username: $e");
     }
   }
 
-  void addFavourite(String location, String district, String price, String time, String vehicleType) async {
+  void addFavourite(Map<String, dynamic> favouriteData) async {
     try {
       await favouritesCollection.add({
+        ...favouriteData,
         'userId': widget.userId,
-        'location': location,
-        'district': district,
-        'price': price,
-        'time': time,
-        'vehicleType': vehicleType,
       });
-      fetchFavourites(); // Refresh the list after adding
     } catch (e) {
       print("Error adding favourite: $e");
     }
@@ -56,7 +53,6 @@ class _FavouritePageState extends State<FavouritePage> {
   void removeFavourite(String docId) async {
     try {
       await favouritesCollection.doc(docId).delete();
-      fetchFavourites(); // Refresh the list after deleting
     } catch (e) {
       print("Error removing favourite: $e");
     }
@@ -200,66 +196,147 @@ class _FavouritePageState extends State<FavouritePage> {
           ],
         ),
       ),
-      body: favourites.isEmpty
-          ? Center(
+      body: StreamBuilder(
+        stream: favouritesCollection.where('userId', isEqualTo: widget.userId).snapshots(),
+        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(
               child: Card(
                 color: Colors.red,
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    'No Favourites',
-                    style: TextStyle(color: Colors.white, fontSize: 18),
-                  ),
+                  child: Text('No Favourites', style: TextStyle(color: Colors.white, fontSize: 18)),
                 ),
               ),
-            )
-          : ListView.builder(
-              itemCount: favourites.length,
-              itemBuilder: (context, index) {
-                final favourite = favourites[index];
-                return Card(
-                  margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: ListTile(
-                    leading: Icon(Icons.location_on, color: Colors.red),
-                    title: Text(favourite['location']),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("District: ${favourite['district']}"),
-                        Text("Price: ${favourite['price']}"),
-                        Text("Time: ${favourite['time']}"),
-                        Text("Vehicle: ${favourite['vehicleType']}"),
+            );
+          }
+
+          return ListView.builder(
+            itemCount: snapshot.data!.docs.length,
+            itemBuilder: (context, index) {
+              final doc = snapshot.data!.docs[index];
+              final favourite = doc.data() as Map<String, dynamic>;
+              final docId = doc.id;
+
+              return Card(
+                margin: EdgeInsets.all(10),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.location_on, color: Colors.red),
+                          SizedBox(width: 20),
+                          Text(
+                            favourite['location'],
+                            style: TextStyle(
+                              fontSize: 16, 
+                              fontWeight: FontWeight.bold, 
+                              color: Colors.green),
+                          ),
+                          SizedBox(width: 250),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.green[400],
+                              borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            favourite['pricingOption'],
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
                       ],
                     ),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    SizedBox(height: 10),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.directions_car, color: Colors.red),
+                            SizedBox(width: 10),
+                            Text(
+                              favourite['vehiclePlateNum'], 
+                              style: TextStyle(fontSize: 16)),
+                          ],
+                        ),
+                        Text(
+                          "RM ${favourite['price']}",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 20),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         ElevatedButton(
                           onPressed: () {
-                            addFavourite(
-                              favourite['location'],
-                              favourite['district'],
-                              favourite['price'],
-                              favourite['time'],
-                              favourite['vehicleType'],
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AddParkingPage(
+                                  userparkingselectionID: docId, // Pass the document ID
+                                  location: favourite['location'], // Pass location
+                                  pricingOption: favourite['pricingOption'] ?? 'Daily', // Pass pricing option, default to 'Daily'
+                                  userId: widget.userId, // Pass the user ID
+                                ),
+                              ),
                             );
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                          child: Text("Add This Parking"),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.add, color: Colors.white),
+                              Text(
+                                "Add This Parking",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        SizedBox(height: 8),
                         ElevatedButton(
                           onPressed: () {
-                            removeFavourite(favourite['id']);
+                            removeFavourite(docId);
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                          child: Text("Remove"),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.delete_outline, color: Colors.white),
+                              Text(
+                                "Remove",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                );
-              },
-            ),
-    );
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ),
+  );
   }
 }
