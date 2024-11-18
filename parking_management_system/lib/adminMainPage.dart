@@ -4,57 +4,57 @@ import 'package:flutter/material.dart';
 import 'package:parking_management_system/adminEditParkingSelection.dart';
 import 'package:parking_management_system/adminPSHistory.dart';
 import 'package:parking_management_system/adminPackagesBought.dart';
+import 'package:parking_management_system/adminProfile.dart';
 
 
 class AdminMainPage extends StatefulWidget {
   final String adminId;
 
   AdminMainPage({required this.adminId});
-  
+
   @override
   State<AdminMainPage> createState() => _AdminMainPageState();
 }
 
 class _AdminMainPageState extends State<AdminMainPage> {
-  String admin_username = '';
+  String adminUsername = '';
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _fetchUsername();
   }
 
-  Future<void> _fetchUsername() async{
-    try{
+  Future<void> _fetchUsername() async {
+    try {
       final adminDoc = await FirebaseFirestore.instance
+          .collection('admins')
+          .doc(widget.adminId)
+          .get();
 
-        .collection('admins')
-        .doc(widget.adminId)
-        .get();
-      
       setState(() {
-        admin_username = adminDoc.data()?['admin_username']?? 'Admin Username';
+        adminUsername = adminDoc.data()?['admin_username'] ?? 'Admin Username';
       });
-    }catch(e){
+    } catch (e) {
       print("Error fetching admin username: $e");
     }
   }
 
-  void _logout(BuildContext context) async{
-    try{
-      //Sign out from firebase authentication
+  void _logout(BuildContext context) async {
+    try {
+      // Sign out from firebase authentication
       await FirebaseAuth.instance.signOut();
 
-      //Navigate to LoginPage and replace current page
+      // Navigate to LoginPage and replace current page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
       );
-    }catch(e){
-      //Handle any errors that occur during sign-out
+    } catch (e) {
+      // Handle any errors that occur during sign-out
       print("Error sign out: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sign out. Please try again')),
+        SnackBar(content: Text('Error signing out. Please try again')),
       );
     }
   }
@@ -71,12 +71,10 @@ class _AdminMainPageState extends State<AdminMainPage> {
             // Handle menu press
           },
         ),
-
         title: Image.asset(
           'assets/logomelaka.jpg',
           height: 60,
         ),
-
         centerTitle: true,
         actions: [
           Padding(
@@ -86,7 +84,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
               icon: Row(
                 children: [
                   Text(
-                    admin_username,
+                    adminUsername,
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(
@@ -103,10 +101,10 @@ class _AdminMainPageState extends State<AdminMainPage> {
               }).toList(),
               onChanged: (String? value) {
                 if (value == 'Profile') {
-                  Navigator.pushReplacement(
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(),
+                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -114,10 +112,9 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 }
               },
             ),
-          )
+          ),
         ],
       ),
-
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -130,9 +127,8 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   icon: Icons.edit,
                   text: 'Edit Parking Selection',
                   onTap: () {
-                    // Handle Edit Parking Selection tap
-                    Navigator.pushReplacement(
-                      context, 
+                    Navigator.push(
+                      context,
                       MaterialPageRoute(
                         builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
                       ),
@@ -143,9 +139,8 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   icon: Icons.history,
                   text: 'Parking Selection History',
                   onTap: () {
-                    // Handle Parking Selection History tap
-                    Navigator.pushReplacement(
-                      context, 
+                    Navigator.push(
+                      context,
                       MaterialPageRoute(
                         builder: (context) => ParkingSelectionHistoryPage(),
                       ),
@@ -162,7 +157,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
               ],
             ),
             SizedBox(height: 20),
-            
             // Packages Bought Card
             CustomCard(
               title: 'Packages Bought',
@@ -171,9 +165,8 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   icon: Icons.edit,
                   text: 'Edit Packages Bought',
                   onTap: () {
-                    // Handle Edit Packages Bought tap
-                     Navigator.push(
-                      context, 
+                    Navigator.push(
+                      context,
                       MaterialPageRoute(
                         builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
                       ),
@@ -200,28 +193,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// Placeholder for AdminProfilePage widget
-class AdminProfilePage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Admin Profile')),
-      body: Center(child: Text('Profile Page')),
-    );
-  }
-}
-
-// Placeholder for LoginPage widget
-class LoginPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Login Page')),
-      body: Center(child: Text('Login Page Content')),
     );
   }
 }
