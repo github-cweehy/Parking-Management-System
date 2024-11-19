@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:parking_management_system/paymentmethod.dart';
 
 class ConfirmPackagePage extends StatefulWidget {
   final String duration; 
@@ -37,7 +37,6 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
 
       String defaultVehicle = userDoc.data()?['default_vehicle'] ?? '';
 
-
       setState(() {
         vehiclePlates = plates;
         selectedPlate = defaultVehicle.isNotEmpty && plates.contains(defaultVehicle) 
@@ -50,16 +49,35 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
     }
   }
 
-  // Calculate end date based on selected duration
   void calculateEndDate() {
-    if (widget.duration.contains("1-month")) {
-      endDate = DateTime(startDate.year, startDate.month + 1, startDate.day);
-    } else if (widget.duration.contains("3-months")) {
-      endDate = DateTime(startDate.year, startDate.month + 3, startDate.day);
-    }
-    else if (widget.duration.contains("6-months")) {
-      endDate = DateTime(startDate.year, startDate.month + 6, startDate.day);
-    }
+  int monthsToAdd;
+  switch (widget.duration) {
+    case "1-month":
+      monthsToAdd = 1;
+      break;
+    case "3-month":
+      monthsToAdd = 3;
+      break;
+    case "6-month":
+      monthsToAdd = 6;
+      break;
+    default:
+      return;  
+  }
+
+    
+    setState(() {
+      endDate = DateTime(
+        startDate.year,
+        startDate.month + monthsToAdd,
+        startDate.day,
+      );
+
+      if (endDate.month != ((startDate.month + monthsToAdd - 1) % 12 + 1)) {
+        endDate = DateTime(endDate.year, endDate.month + 1, 0);
+      }
+    });
+
   }
 
   @override
@@ -67,6 +85,27 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
     super.initState();
     calculateEndDate();
     _fetchVehiclePlates();
+  }
+
+  Future<String?> _savePackageToFirestore() async {
+    try {
+      DocumentReference docRef = await FirebaseFirestore.instance
+        .collection('packages_bought')
+        .add({
+          'userId': widget.userId,
+          'duration': widget.duration,
+          'price': widget.price,
+          'startDate': startDate,
+          'endDate': endDate,
+          'vehiclePlate': selectedPlate,
+      });
+
+      print("Package saved to Firestore with ID: ${docRef.id}");
+      return docRef.id;
+
+    } catch (e) {
+      print("Error saving package to Firestore: $e");
+    }
   }
 
   @override
@@ -77,14 +116,6 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: DropdownButton(
-              underline: SizedBox(),
-              icon: const Icon(Icons.person, color: Colors.white),
-              items: const [
-                DropdownMenuItem(value: "Username", child: Text("Username"))
-              ],
-              onChanged: (value) {},
-            ),
           )
         ],
       ),
@@ -173,20 +204,34 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 50, vertical: 15),
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       // Handle confirm payment logic here
                       if (selectedPlate == null) {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                             content: Text("Please select a plate number.")));
                         return;
                       }
-                      // Save to Firebase or handle further steps
-                      print(
-                          "Confirmed package with plate: $selectedPlate, duration: ${widget.duration}, start: $startDate, end: $endDate, price: RM ${widget.price}");
+
+                      String? packageId = await _savePackageToFirestore();
+
+                       Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PaymentMethodPage(
+                            userId: widget.userId, 
+                            packageId: packageId,
+                            price:widget.price, 
+                            duration: widget.duration,
+                            source: 'packages',
+                            ),
+                          ),
+                        );
                     },
                     child: const Text(
                       "Confirm Payment",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white),
                     ),
                   ),
                 ],

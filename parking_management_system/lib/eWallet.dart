@@ -5,8 +5,10 @@ import 'package:parking_management_system/mainpage.dart';
 class EWalletPaymentPage extends StatefulWidget {
   final double price;
   final String userId;
+  final String? parking;
+  final String? packages;
 
-  EWalletPaymentPage({required this.price, required this.userId});
+  EWalletPaymentPage({this.packages,this.parking, required this.price, required this.userId});
 
   @override
   State<EWalletPaymentPage> createState() => _EWalletPaymentPageState();
@@ -31,12 +33,14 @@ class _EWalletPaymentPageState extends State<EWalletPaymentPage> {
       String transactionId = 'ew${idCounter.toString().padLeft(3, '0')}';
 
       await transactions.doc(transactionId).set({
-        'id': transactionId,
+        'userId': widget.userId,
         'phone': _phoneController.text,
         'selectedEWallet': _selectedEWallet,
         'amount': widget.price,
         'timestamp': FieldValue.serverTimestamp(),
         'paymentMethod': 'E-Wallet',
+        'packages': widget.packages,
+        'parking': widget.parking,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,13 +65,29 @@ class _EWalletPaymentPageState extends State<EWalletPaymentPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.black),
-          onPressed: () {
-            // Handle menu press
-          },
-        ),
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () async{
+              try {
+                await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(widget.parking)
+                  .delete();
+                
+                Navigator.pushReplacement(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(userId: widget.userId),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting data. Please try again.')),
+                );
+              }
+            },
+          ),
         title: Image.asset(
-          'assets/logomelaka.jpg',
+          'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,

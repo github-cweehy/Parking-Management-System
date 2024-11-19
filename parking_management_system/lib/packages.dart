@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parking_management_system/confirmPackage.dart';
+import 'confirmPackage.dart';
 import 'favourite.dart';
 import 'history.dart';
 import 'mainpage.dart';
+import 'packageshistory.dart';
 import 'userprofile.dart';
 import 'login.dart';
 
@@ -227,6 +228,18 @@ class _PackagesPageState extends State<PackagesPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => FavouritePage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.work_history_outlined, color: Colors.red),
+              title: Text('Packages History', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PackagesHistoryPage(userId: widget.userId),
                   ),
                 );
               },

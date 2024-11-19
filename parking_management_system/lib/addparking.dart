@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'favourite.dart';
 import 'history.dart';
 import 'mainpage.dart';
 import 'paymentmethod.dart';
-import 'userprofile.dart'; 
-import 'login.dart'; 
 
 
 class AddParkingPage extends StatefulWidget {
@@ -36,67 +33,57 @@ class _AddParkingPageState extends State<AddParkingPage> {
   @override
   void initState() {
     super.initState();
-    _fetchUsername();
     _fetchVehiclePlates();
-    _setInitialDatesAndPrice();
+    _fetchPricing();
   }
 
-  Future<void> _fetchUsername() async {
+
+  Future<void> _fetchVehiclePlates() async {
     try {
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.userId)
           .get();
+          
+      // Get the list of vehicles from the user's data
+      List<dynamic> vehicleList = userDoc.data()?['vehicles'] ?? [];
+      List<String> plates = vehicleList.map<String>((vehicle) {
+      return vehicle['registrationNumber'] ?? '';
+      }).toList();
+
+      String defaultVehicle = userDoc.data()?['default_vehicle'] ?? '';
+
+
       setState(() {
-        username = userDoc.data()?['username'] ?? '';
-      });
+        vehiclePlates = plates;
+        selectedPlate = defaultVehicle.isNotEmpty && plates.contains(defaultVehicle) 
+            ? defaultVehicle 
+            : plates.isNotEmpty 
+              ? plates.first 
+              : '';    });
     } catch (e) {
-      print("Error fetching username: $e");
+      print("Error fetching vehicle plates: $e");
     }
   }
 
-Future<void> _fetchVehiclePlates() async {
+Future<void> _fetchPricing() async {
   try {
-    final userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(widget.userId)
+    final pricingDoc = await FirebaseFirestore.instance
+        .collection('parkingselection')
+        .doc(widget.pricingOption) // Assuming the document ID matches the pricing option (e.g., 'Hourly', 'Daily', etc.)
         .get();
-        
-    // Get the list of vehicles from the user's data
-    List<dynamic> vehicleList = userDoc.data()?['vehicles'] ?? [];
-    List<String> plates = vehicleList.map<String>((vehicle) {
-    return vehicle['registrationNumber'] ?? '';
-    }).toList();
 
-    String defaultVehicle = userDoc.data()?['default_vehicle'] ?? '';
-
-
-    setState(() {
-      vehiclePlates = plates;
-      selectedPlate = defaultVehicle.isNotEmpty && plates.contains(defaultVehicle) 
-          ? defaultVehicle 
-          : plates.isNotEmpty 
-            ? plates.first 
-            : '';    });
+    if (pricingDoc.exists) {
+      setState(() {
+        // Fetch the price values from Firestore document
+        price = pricingDoc.data()?['price'] ?? 0.0;
+      });
+    }
   } catch (e) {
-    print("Error fetching vehicle plates: $e");
+    print("Error fetching pricing: $e");
   }
 }
 
-
-
-  void _setInitialDatesAndPrice() {
-    if (widget.pricingOption == "Weekly") {
-      endDate = startDate.add(Duration(days: 7));
-      price = 23.00;
-    } else if (widget.pricingOption == "Daily") {
-      endDate = startDate;
-      price = 5.00;
-    } else if (widget.pricingOption == "Hourly") {
-      endDate = startDate;
-      price = 1.00; // Base price for the first hour
-    }
-  }
 
   void _updateEndDate() {
     if (widget.pricingOption == "Weekly") {
@@ -117,15 +104,17 @@ Future<void> _fetchVehiclePlates() async {
       final int durationMinutes = endMinutes - startMinutes;
 
       if (durationMinutes <= 60) {
-        price = 1.00;
+        price = price; // Base price for the first hour
       } else {
         final int extraMinutes = durationMinutes - 60;
         // Calculate number of half-hours, rounding up
         int halfHours = (extraMinutes / 30).ceil();
-        price = 1.00 + (halfHours * 0.40);
+        price = price + (halfHours * 0.40); // Add half-hourly charge
       }
+    } else {
+      // Handle the price for daily, weekly, or other pricing options
+      setState(() {});
     }
-    setState(() {});
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
@@ -169,87 +158,42 @@ Future<void> _fetchVehiclePlates() async {
     }
   }
 
-  void _logout(BuildContext context) async{
-  try {
-    // Sign out from Firebase Authentication
-    await FirebaseAuth.instance.signOut();
-    
-    // Navigate to LoginPage and replace the current page
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => LoginPage()),
-    );
-  } catch (e) {
-    // Handle any errors that occur during sign-out
-    print("Error signing out: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error signing out. Please try again.')),
-    );
-  }
-}
-
-
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat("d MMMM yyyy");
-
+    final dateFormat = DateFormat("dd MMMM yyyy");
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: Colors.black),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () async{
+              try {
+                await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(widget.userparkingselectionID)
+                  .delete();
+                
+                Navigator.pushReplacement(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(userId: widget.userId),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting data. Please try again.')),
+                );
+              }
             },
           ),
-        ),
         title: Image.asset(
           'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<String>(
-              underline: SizedBox(),
-              icon: Row(
-                children: [
-                  Text(
-                    username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
-                ],
-              ),
-              items: <String>['Profile', 'Logout'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? value) {
-                if (value == 'Profile') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserProfilePage(userId: widget.userId),
-                    ),
-                  );
-                } else if (value == 'Logout') {
-                  _logout(context);
-                }
-              },
-            ),
-          ),
-        ],
       ),
-
+      
       // Navigation Side Bar
       drawer: Drawer(
         child: ListView(
@@ -542,7 +486,7 @@ Future<void> _fetchVehiclePlates() async {
 
                         await parkingSelectionDocRef.update({
                           'vehiclePlateNum': selectedPlate,
-                          'price': price,
+                          'price': price.toStringAsFixed(2),
                           'startTime': startDateTime.toString(),
                           'endTime': endDateTime.toString(),
                         });
@@ -555,6 +499,7 @@ Future<void> _fetchVehiclePlates() async {
                               userId: widget.userId, 
                               price:price, 
                               userparkingselectionID: widget.userparkingselectionID,
+                              source: 'history',
                               ),
                             ),
                           );

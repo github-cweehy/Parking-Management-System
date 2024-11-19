@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:parking_management_system/packageshistory.dart';
 import 'history.dart';
 import 'mainpage.dart';
+import 'packages.dart';
 import 'userprofile.dart';
 import 'login.dart';
 import 'addparking.dart';
+import 'packageshistory.dart';
 
 class FavouritePage extends StatefulWidget {
   final String userId;
@@ -171,7 +174,7 @@ class _FavouritePageState extends State<FavouritePage> {
             ),
             ListTile(
               leading: Icon(Icons.history, color: Colors.red),
-              title: Text('History', style: TextStyle(color: Colors.red)),
+              title: Text('Parking History', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.push(
                   context,
@@ -189,6 +192,30 @@ class _FavouritePageState extends State<FavouritePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => FavouritePage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.local_grocery_store_outlined, color: Colors.red),
+              title: Text('Packages', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PackagesPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.work_history_outlined, color: Colors.red),
+              title: Text('Packages History', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PackagesHistoryPage(userId: widget.userId),
                   ),
                 );
               },

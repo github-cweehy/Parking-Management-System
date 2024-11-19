@@ -1,8 +1,14 @@
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parking_management_system/favourite.dart';
+import 'package:path/path.dart' as path;
 import 'history.dart';
 import 'mainpage.dart';
+import 'packages.dart';
+import 'packageshistory.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
@@ -20,11 +26,55 @@ class _UserProfilePageState extends State<UserProfilePage> {
   List<Map<String, dynamic>> vehicles = [];
   String? defaultVehicle;
   Map<String, dynamic>? userData;
+  String? profileImageUrl;
 
   @override
   void initState() {
     super.initState();
     _fetchUserData();
+  }
+
+  // Function to pick image from gallery
+  Future<void> _pickImage() async {
+    final ImagePicker _picker = ImagePicker();
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+
+    if (image != null) {
+      _uploadProfilePicture(image);
+    }
+  }
+
+  // Function to upload image to Firebase Storage
+  Future<void> _uploadProfilePicture(XFile image) async {
+    try {
+      String fileName = path.basename(image.path);
+      FirebaseStorage storage = FirebaseStorage.instance;
+
+      // Create a reference to Firebase Storage location
+      Reference storageRef = storage.ref().child('profile_pictures/$fileName');
+
+      // Upload the image to Firebase Storage
+      UploadTask uploadTask = storageRef.putFile(File(image.path));
+
+      // Get the download URL of the uploaded image
+      TaskSnapshot snapshot = await uploadTask;
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Now, store this URL in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .update({'profile_picture': downloadUrl});
+
+      setState(() {
+        profileImageUrl = downloadUrl;  // Update the UI with the new image URL
+      });
+
+      _showSnackBar("Profile picture updated successfully.");
+    } catch (e) {
+      print("Error uploading profile picture: $e");
+      _showSnackBar("Failed to upload profile picture.");
+    }
   }
 
   Future<void> _fetchUserData() async {
@@ -40,6 +90,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
           userData = data;
           vehicles = List<Map<String, dynamic>>.from(data['vehicles'] ?? []);
           defaultVehicle = data['default_vehicle'];
+          profileImageUrl = data['profile_picture'];
         });
       }
     } catch (e) {
@@ -48,60 +99,60 @@ class _UserProfilePageState extends State<UserProfilePage> {
   }
 
   Future<void> _edit(String field, String currentValue) async {
-  TextEditingController controller = TextEditingController(text: currentValue);
+    TextEditingController controller = TextEditingController(text: currentValue);
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text('Edit $field'),
-        content: TextField(
-          controller: controller,
-          decoration: InputDecoration(hintText: 'Enter new $field'),
-        ),
-        actions: [
-          TextButton(
-            child: Text('Cancel'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit $field'),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(hintText: 'Enter new $field'),
           ),
-          TextButton(
-            child: Text('Save'),
-            onPressed: () async {
-              String newValue = controller.text.trim();
-              if (newValue.isNotEmpty) {
-                if (field == 'phone_number') {
-                  if (await _isPhoneNumberDuplicate(newValue)) {
-                    _showSnackBar("This phone number is already in use.");
-                    return;
+          actions: [
+            TextButton(
+              child: Text('Cancel'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+            TextButton(
+              child: Text('Save'),
+              onPressed: () async {
+                String newValue = controller.text.trim();
+                if (newValue.isNotEmpty) {
+                  if (field == 'phone_number') {
+                    if (await _isPhoneNumberDuplicate(newValue)) {
+                      _showSnackBar("This phone number is already in use.");
+                      return;
+                    }
+                  }
+                  try {
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(widget.userId)
+                        .update({field: newValue});
+                    setState(() {
+                      if (field == 'first_name') {
+                        userData?['first_name'] = newValue;
+                      } else if (field == 'last_name') {
+                        userData?['last_name'] = newValue;
+                      }
+                    });
+                    Navigator.of(context).pop();
+                  } catch (e) {
+                    print("Error updating $field: $e");
+                    _showSnackBar("Failed to update $field.");
                   }
                 }
-                try {
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(widget.userId)
-                      .update({field: newValue});
-                  setState(() {
-                    if (field == 'first_name') {
-                      userData?['first_name'] = newValue;
-                    } else if (field == 'last_name') {
-                      userData?['last_name'] = newValue;
-                    }
-                  });
-                  Navigator.of(context).pop();
-                } catch (e) {
-                  print("Error updating $field: $e");
-                  _showSnackBar("Failed to update $field.");
-                }
-              }
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
 Future<bool> _isPhoneNumberDuplicate(String phoneNumber) async {
   try {
@@ -187,14 +238,15 @@ void _setDefaultVehicle(String registrationNumber) async {
   }
 }
 
-void _showSnackBar(String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.red,
-    ),
-  );
-}
+  // Function to show snack bar with messages
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
 
   @override
@@ -205,33 +257,20 @@ void _showSnackBar(String message) {
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.menu, color: Colors.black),
-            onPressed: () {
-              // Handle menu press
-            },
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: Icon(Icons.menu, color: Colors.black),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              },
+            ),
           ),
           title: Image.asset(
             'assets/logomelaka.jpg',
             height: 60,
           ),
           centerTitle: true,
-          actions: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Row(
-                children: [
-                  Text(
-                    userData?['username'] ?? '',
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(Icons.arrow_drop_down, color: Colors.black),
-                ],
-              ),
-            ),
-          ],
         ),
-        // Add the drawer here
         drawer: Drawer(
           child: ListView(
             padding: EdgeInsets.zero,
@@ -273,29 +312,49 @@ void _showSnackBar(String message) {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.history, color: Colors.red),
-                title: Text('History', style: TextStyle(color: Colors.red)),
+                leading: Icon(Icons.history, color: Colors.red,),
+                title: Text('Parking History', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => HistoryPage(
-                        userId: widget.userId,
-                      ),
+                      builder: (context) => HistoryPage(userId: widget.userId),
                     ),
                   );
                 },
               ),
               ListTile(
                 leading: Icon(Icons.favorite, color: Colors.red),
-                title: Text('Favourite', style: TextStyle(color: Colors.red)),
+                title: Text('Favorite', style: TextStyle(color: Colors.red)),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => FavouritePage(
-                        userId: widget.userId,
-                      ),
+                      builder: (context) => FavouritePage(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.local_grocery_store_outlined, color: Colors.red),
+                title: Text('Packages', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PackagesPage(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.work_history_outlined, color: Colors.red),
+                title: Text('Packages History', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PackagesHistoryPage(userId: widget.userId),
                     ),
                   );
                 },
@@ -320,12 +379,20 @@ void _showSnackBar(String message) {
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.red,
-                          child: Icon(Icons.person, color: Colors.black, size: 50),
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Colors.red,
+                            backgroundImage: profileImageUrl != null
+                                ? NetworkImage(profileImageUrl!)
+                                : null,
+                            child: profileImageUrl == null
+                                ? Icon(Icons.person, color: Colors.black, size: 50)
+                                : null,
+                          ),
                         ),
-                        const SizedBox(height: 10),
+                        SizedBox(height: 10),
 
                         Text(
                           userData?['username'] ?? "User's Name",

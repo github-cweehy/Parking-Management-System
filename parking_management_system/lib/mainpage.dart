@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:parking_management_system/packages.dart';
+import 'packages.dart';
 import 'favourite.dart';
 import 'history.dart';
+import 'packageshistory.dart';
 import 'userprofile.dart';
 import 'login.dart';
 import 'location.dart';
@@ -25,12 +26,14 @@ class _MainPageState extends State<MainPage> {
 
   String username = '';
   List<Map<String, dynamic>> parkingHistory = [];
+  Map<String, String> parkingPrice = {};
 
   @override
   void initState() {
     super.initState();
     _fetchUsername();
     _fetchParkingHistory();
+    _fetchParkingPrices();
   }
 
   Future<void> _fetchUsername() async {
@@ -69,6 +72,23 @@ class _MainPageState extends State<MainPage> {
       });
     } catch (e) {
       print("Error fetching parking history: $e");
+    }
+  }
+
+  Future<void> _fetchParkingPrices() async {
+    try {
+      final pricingDoc = await _firestore.collection('parkingselection').doc('pricing').get();
+      if (pricingDoc.exists) {
+        setState(() {
+          parkingPrice = {
+            'Hourly': pricingDoc.data()?['Hourly'],
+            'Daily': pricingDoc.data()?['Daily'],
+            'Weekly': pricingDoc.data()?['Weekly'],
+          };
+        });
+      }
+    } catch (e) {
+      print("Error fetching parking prices: $e");
     }
   }
 
@@ -121,6 +141,7 @@ class _MainPageState extends State<MainPage> {
       SnackBar(content: Text(parkingData['isFavourite'] ? 'Added to Favourites' : 'Removed from Favourites')),
     );
   }
+  
 
   void _showPricingDialog(BuildContext context) {
     showDialog(
@@ -134,9 +155,9 @@ class _MainPageState extends State<MainPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildPricingOption("Hourly", "RM 0.60"),
-              _buildPricingOption("Daily", "RM 5.00"),
-              _buildPricingOption("Weekly", "RM 23.00"),
+              _buildPricingOption("Hourly", parkingPrice['Hourly'] ?? 'RM 0.60'),
+              _buildPricingOption("Daily", parkingPrice['Daily'] ?? 'RM 5.00'),
+              _buildPricingOption("Weekly", parkingPrice['Weekly'] ?? 'RM 23.00'),
             ],
           ),
         );
@@ -436,6 +457,18 @@ class _MainPageState extends State<MainPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => PackagesPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.work_history_outlined, color: Colors.red),
+              title: Text('Packages History', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PackagesHistoryPage(userId: widget.userId),
                   ),
                 );
               },

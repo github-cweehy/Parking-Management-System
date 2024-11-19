@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:open_file/open_file.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -7,19 +6,19 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 
-class ReceiptPage extends StatelessWidget {
-  final String district;
-  final String startTime;
-  final String endTime;
+class PackageReceiptPage extends StatelessWidget {
+  final String startDate;
+  final String endDate;
   final double amount;
-  final String type;
+  final String vehiclePlate;
+  final String duration;
 
-  ReceiptPage({
-    required this.district,
-    required this.startTime,
-    required this.endTime,
+  PackageReceiptPage({
+    required this.startDate,
+    required this.endDate,
     required this.amount,
-    required this.type,
+    required this.vehiclePlate,
+    required this.duration,
   });
 
     Future<void> _generateAndSavePDF() async {
@@ -44,10 +43,9 @@ class ReceiptPage extends StatelessWidget {
             pw.SizedBox(height: 10),
             pw.Divider(thickness: 2),
             pw.SizedBox(height: 10),
-            pw.Text("Start: $startTime", style: pw.TextStyle(fontSize: 16)),
-            pw.Text("End: $endTime", style: pw.TextStyle(fontSize: 16)),
-            pw.Text("District: $district", style: pw.TextStyle(fontSize: 16)),
-            pw.Text("Parking Selection: $type", style: pw.TextStyle(fontSize: 16)),
+            pw.Text("Start Date : $startDate", style: pw.TextStyle(fontSize: 16)),
+            pw.Text("End Date   : $endDate", style: pw.TextStyle(fontSize: 16)),
+            pw.Text("Duration: $duration", style: pw.TextStyle(fontSize: 16)),
             pw.SizedBox(height: 20),
             pw.Divider(thickness: 2),
             pw.Row(
@@ -84,7 +82,7 @@ class ReceiptPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Receipt"),
+        title: Text("Package Receipt"),
       ),
       body: Padding(
         padding: const EdgeInsets.all(50.0),
@@ -107,19 +105,19 @@ class ReceiptPage extends StatelessWidget {
             Column(
               children: [
                 Text(
-                  "Start: $startTime",
+                  "Start: $startDate",
                   style: TextStyle(fontSize: 16),
                 ),
                 Text(
-                  "End  : $endTime",
+                  "End  : $endDate",
                   style: TextStyle(fontSize: 16),
                 ),
                 Text(
-                  "District: $district",
+                  "Duration: $duration",
                   style: TextStyle(fontSize: 16),
                 ),
                 Text(
-                  "Parking Selection: $type",
+                  "Vehicle Plate Number: $vehiclePlate",
                   style: TextStyle(fontSize: 16),
                 )
               ],
