@@ -1,9 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminMainPage.dart'; 
+import 'package:parking_management_system/adminEditPackagesBought.dart';
+import 'package:parking_management_system/adminMainPage.dart';
+import 'package:parking_management_system/adminProfile.dart';
+import 'package:parking_management_system/login.dart'; 
 
 class ParkingSelectionHistoryPage extends StatefulWidget {
+  final String adminId;
+
+  ParkingSelectionHistoryPage({required this.adminId});
 
   @override
   _ParkingSelectionHistoryPageState createState() => _ParkingSelectionHistoryPageState();
@@ -15,8 +21,36 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   String username = ''; 
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
+  String adminUsername = '';
 
-  String get adminId => FirebaseAuth.instance.currentUser?.uid?? '';
+  Timestamp? startTimestamp;
+  Timestamp? endTimestamp;
+
+  @override
+  void initState(){
+    super.initState();
+    _fetchUsername();
+    startTimestamp = Timestamp.fromDate(startDate);
+    endTimestamp = Timestamp.fromDate(endDate);
+  }
+
+  Future<void> _fetchUsername() async {
+    try {
+      final adminDoc = await FirebaseFirestore.instance
+        .collection('admins')
+        .doc(widget.adminId)
+        .get();
+
+      setState(() {
+        adminUsername = adminDoc.data()?['admin_username'] ?? 'Admin Username';
+      });
+    } catch (e) {
+      print("Error fetching admin username: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading admin data. Please try again.')),
+      );
+    }
+  }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final DateTime? picked = await showDatePicker(
@@ -30,8 +64,10 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
       setState(() {
         if (isStartDate) {
           startDate = picked;
+          startTimestamp = Timestamp.fromDate(startDate);
         } else {
           endDate = picked;
+          endTimestamp = Timestamp.fromDate(endDate);
         }
       });
     }
@@ -39,9 +75,9 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
 
   Stream<QuerySnapshot> getFilteredData() {
     return _firestore
-      .collection('parkingRecords')
-      .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-      .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+      .collection('history parking')
+      .where('date', isGreaterThanOrEqualTo: startTimestamp)
+      .where('date', isLessThanOrEqualTo: endTimestamp)
       .snapshots();
   }
 
@@ -50,11 +86,12 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
       await FirebaseAuth.instance.signOut();
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => LoginPage()), // 确保LoginPage已定义
+        MaterialPageRoute(builder: (context) => LoginPage()),
       );
     } catch (e) {
+      print("Error sign out: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out. Please try again.')),
+        SnackBar(content: Text('Error sign out. Please try again')),
       );
     }
   }
@@ -68,13 +105,15 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
         leading: IconButton(
           icon: Icon(Icons.menu, color: Colors.black),
           onPressed: () {
-            // Handle menu press
+            //Handle Menu press
           },
         ),
+
         title: Image.asset(
-          'assets/logomelaka.jpg',
-          height: 60,
+          'assets/logomelaka.jpg', 
+          height: 60
         ),
+        
         centerTitle: true,
         actions: [
           Padding(
@@ -83,13 +122,11 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
               underline: Container(),
               icon: Row(
                 children: [
-                  Text(
-                    username,
-                    style: TextStyle(color: Colors.black),
-                  ),
+                  Text(adminUsername, style: TextStyle(color: Colors.black)),
+                  Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
-              items: <String>['Profile', 'Logout'].map((String value) {
+              items: ['Profile', 'Logout'].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -97,10 +134,10 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
               }).toList(),
               onChanged: (String? value) {
                 if (value == 'Profile') {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminMainPage(adminId: adminId),
+                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -113,7 +150,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
       ),
 
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -125,28 +162,58 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                     Navigator.pop(context);
                   },
                 ),
-                SizedBox(width: 10),
-
-                Text(
-                  "Parking Selection History",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+                Text("Parking Selection History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 30),
+            
             Row(
               children: [
-                Expanded(
-                  child: _buildDateSelector(context, "Start Date", startDate, true),
+                // Start Date Section
+                GestureDetector(
+                  onTap: () => _selectDate(context, true),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("${startDate.day} ${_monthName(startDate.month)} ${startDate.year}",
+                            style: TextStyle(color: Colors.black, fontSize: 13)),
+                        Icon(Icons.calendar_today, color: Colors.grey),
+                      ],
+                    ),
+                  ),
                 ),
-                SizedBox(width: 10),
-
-                Expanded(
-                  child: _buildDateSelector(context, "End Date", endDate, false),
+                SizedBox(width: 8),
+                // End Date Section
+                GestureDetector(
+                  onTap: () => _selectDate(context, false),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("${endDate.day} ${_monthName(endDate.month)} ${endDate.year}",
+                            style: TextStyle(color: Colors.black, fontSize: 13)),
+                        Icon(Icons.calendar_today, color: Colors.grey),
+                      ],
+                    ),
+                  ),
                 ),
-
+                
+                // Search Icon
                 IconButton(
-                  icon: Icon(Icons.search_sharp, color: Colors.black),
+                  icon: Icon(Icons.search_sharp, color: Colors.grey),
                   onPressed: () {
                     setState(() {}); // Refresh to apply date filtering
                   },
@@ -160,6 +227,9 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text("Error loading data."));
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return Center(child: Text("No data found!"));
@@ -178,42 +248,39 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     );
   }
 
-  Widget _buildDateSelector(BuildContext context, String labelText, DateTime date, bool isStartDate) {
-    return GestureDetector(
-      onTap: () => _selectDate(context, isStartDate),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              "$labelText: ${date.day}/${date.month}/${date.year}",
-              style: TextStyle(color: Colors.black),
-            ),
-            Icon(Icons.calendar_today, color: Colors.grey),
-          ],
-        ),
-      ),
-    );
+  String _monthName(int month) {
+    List<String> monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return monthNames[month - 1];
   }
 
   Widget _buildParkingCard(QueryDocumentSnapshot doc) {
     return Card(
       color: Colors.red,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       margin: EdgeInsets.symmetric(vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              doc['username'], 
-              style: TextStyle(color: Colors.white),
+            CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.person, color: Colors.black),
             ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(doc['username'], style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 4),
+                  Text("Packages: ${doc['packagesType']} RM ${doc['amount']}", style: TextStyle(color: Colors.white)),
+                ],
+              ),
+            ),
+            Icon(Icons.more_horiz, color: Colors.white),
           ],
         ),
       ),

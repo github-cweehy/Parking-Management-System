@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminMainPage.dart';
 import 'package:parking_management_system/adminProfile.dart';
 
 class EditParkingSelectionPage extends StatefulWidget {
@@ -9,58 +9,109 @@ class EditParkingSelectionPage extends StatefulWidget {
   EditParkingSelectionPage({required this.adminId});
 
   @override
-  _EditParkingSelectionPageState createState() => _EditParkingSelectionPageState();
+  _EditParkingSelectionPageState createState() =>
+      _EditParkingSelectionPageState();
 }
 
 class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String adminUsername = '';
 
-  List<Map<String, dynamic>> hourlyRates = [];
-  List<Map<String, dynamic>> dailyRates = [];
-  List<Map<String, dynamic>> weeklyRates = [];
+  Map<String, dynamic> hourlyRates = {};
+  Map<String, dynamic> dailyRates = {};
+  Map<String, dynamic> weeklyRates = {};
+  Map<String, dynamic> halflyRates = {};
 
   @override
   void initState() {
     super.initState();
     _fetchRatesFromFirebase();
+    _fetchAdminUsername();
   }
 
-  // get data from Firebase
-  void _fetchRatesFromFirebase() async {
-    DocumentSnapshot snapshot = await _firestore.collection('parkingRates').doc('rates').get();
-    setState(() {
-      hourlyRates = List<Map<String, dynamic>>.from(snapshot['hourlyRates']);
-      dailyRates = List<Map<String, dynamic>>.from(snapshot['dailyRates']);
-      weeklyRates = List<Map<String, dynamic>>.from(snapshot['weeklyRates']);
-    });
-  }
-
-  // update price rates
-  void updateRate(int index, String type, String newDuration, double newPrice) {
-    setState(() {
-      if (type == 'hourly') {
-        hourlyRates[index]['duration'] = newDuration;
-        hourlyRates[index]['price'] = newPrice;
-      } 
-      else if (type == 'daily') {
-        dailyRates[index]['duration'] = newDuration;
-        dailyRates[index]['price'] = newPrice;
-      } 
-      else if (type == 'weekly') {
-        weeklyRates[index]['duration'] = newDuration;
-        weeklyRates[index]['price'] = newPrice;
+  // 获取管理员用户名
+  void _fetchAdminUsername() async {
+    try {
+      DocumentSnapshot snapshot =
+          await _firestore.collection('admins').doc(widget.adminId).get();
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          adminUsername = snapshot['admin_username'];
+        });
       }
-    });
+    } catch (e) {
+      print("Error fetching admin username: $e");
+    }
   }
 
-  // save changes to Firebase
+  // 获取停车费率数据
+  void _fetchRatesFromFirebase() async {
+    try {
+      // 获取每个费率类型的数据
+      DocumentSnapshot hourlySnapshot = await _firestore
+          .collection('parkingselection')
+          .doc('Hourly')
+          .get();
+      DocumentSnapshot dailySnapshot = await _firestore
+          .collection('parkingselection')
+          .doc('Daily')
+          .get();
+      DocumentSnapshot weeklySnapshot = await _firestore
+          .collection('parkingselection')
+          .doc('Weekly')
+          .get();
+      DocumentSnapshot halflySnapshot = await _firestore
+          .collection('parkingselection')
+          .doc('Halfly')
+          .get();
+
+      // 将每个文档数据转换为 Map<String, dynamic> 格式
+      if (hourlySnapshot.exists && hourlySnapshot.data() != null) {
+        setState(() {
+          hourlyRates =
+              Map<String, dynamic>.from(hourlySnapshot.data() as Map);
+        });
+      }
+      if (dailySnapshot.exists && dailySnapshot.data() != null) {
+        setState(() {
+          dailyRates =
+              Map<String, dynamic>.from(dailySnapshot.data() as Map);
+        });
+      }
+      if (weeklySnapshot.exists && weeklySnapshot.data() != null) {
+        setState(() {
+          weeklyRates =
+              Map<String, dynamic>.from(weeklySnapshot.data() as Map);
+        });
+      }
+      if (halflySnapshot.exists && halflySnapshot.data() != null) {
+        setState(() {
+          halflyRates =
+              Map<String, dynamic>.from(halflySnapshot.data() as Map);
+        });
+      }
+    } catch (e) {
+      print("Error fetching rates: $e");
+    }
+  }
+
+  // 保存修改后的停车费率
   void saveChanges() async {
-    await _firestore.collection('parkingRates').doc('rates').set({
-      'hourlyRates': hourlyRates,
-      'dailyRates': dailyRates,
-      'weeklyRates': weeklyRates,
-    });
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Rates saved successfully!')));
+    try {
+      // 保存停车费率数据
+      await _firestore.collection('parkingselection').doc('Hourly').set(hourlyRates);
+      await _firestore.collection('parkingselection').doc('Daily').set(dailyRates);
+      await _firestore.collection('parkingselection').doc('Weekly').set(weeklyRates);
+      await _firestore.collection('parkingselection').doc('Halfly').set(halflyRates);
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Rates saved successfully!'),
+      ));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Failed to save rates: $e'),
+      ));
+    }
   }
 
   @override
@@ -72,15 +123,13 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
         leading: IconButton(
           icon: Icon(Icons.menu, color: Colors.black),
           onPressed: () {
-            // Handle menu press
+            Scaffold.of(context).openDrawer();
           },
         ),
-
         title: Image.asset(
           'assets/logomelaka.jpg',
           height: 60,
         ),
-        
         centerTitle: true,
         actions: [
           Padding(
@@ -90,12 +139,15 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
               icon: Row(
                 children: [
                   Text(
-                    'admin_username', // 替换为实际用户名变量
+                    adminUsername,
                     style: TextStyle(color: Colors.black),
+                  ),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.black,
                   ),
                 ],
               ),
-
               items: <String>['Profile', 'Logout'].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
@@ -107,7 +159,8 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminMainPage(adminId: widget.adminId),
+                      builder: (context) =>
+                          AdminProfilePage(adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -118,19 +171,47 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
           ),
         ],
       ),
-
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            buildRateSection('Hourly', hourlyRates, 'hourly'),
-            buildRateSection('Daily', dailyRates, 'daily'),
-            buildRateSection('Weekly', weeklyRates, 'weekly'),
-            SizedBox(height: 20),
-            
-            ElevatedButton(
-              onPressed: saveChanges,
-              child: Text('Save'),
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                SizedBox(width: 10),
+                Text(
+                  "Edit Parking Selection",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            SizedBox(height: 30),
+            buildRateSection('Hourly', hourlyRates),
+            buildRateSection('Daily', dailyRates),
+            buildRateSection('Weekly', weeklyRates),
+            buildRateSection('Halfly', halflyRates),
+            Spacer(),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: ElevatedButton(
+                  onPressed: saveChanges,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8)),
+                    padding: EdgeInsets.symmetric(horizontal: 35, vertical: 10),
+                  ),
+                  child: Text('Save', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ),
             ),
           ],
         ),
@@ -138,68 +219,105 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
     );
   }
 
-  // update price 
-  Widget buildRateSection(String title, List<Map<String, dynamic>> rates, String type) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  // 构建费率区块
+  Widget buildRateSection(String title, Map<String, dynamic> rates) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(
+          color: Colors.grey.shade300,
+          width: 1.0,
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      margin: EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                setState(() {
-                  rates.add({'duration': 'New Duration', 'price': 0.0});
-                });
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                IconButton(
+                  icon: Icon(Icons.add_circle_outline, color: Colors.black),
+                  onPressed: () {
+                    addNewRate(title);
+                  },
+                ),
+              ],
+            ),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              itemCount: rates.length,
+              itemBuilder: (context, index) {
+                String duration = rates.keys.elementAt(index);
+                double price = rates[duration];
+                return ListTile(
+                  title: Text('$duration'),
+                  subtitle: Text('\$${price.toStringAsFixed(2)}'),
+                  trailing: IconButton(
+                    icon: Icon(Icons.edit),
+                    onPressed: () async {
+                      var result = await _showEditDialog(
+                        context,
+                        duration,
+                        price.toString(),
+                      );
+                      if (result != null) {
+                        setState(() {
+                          rates[duration] = double.tryParse(result[1]) ?? price;
+                        });
+                      }
+                    },
+                  ),
+                );
               },
             ),
           ],
         ),
-        
-        ...rates.asMap().entries.map((entry) {
-          int index = entry.key;
-          Map<String, dynamic> rate = entry.value;
-          return ListTile(
-            leading: Icon(Icons.access_time, color: Colors.white),
-            title: Row(
-              children: [
-                Expanded(child: Text('${rate['duration']}')),
-                SizedBox(width: 10),
-                Expanded(child: Text('RM ${rate['price'].toStringAsFixed(2)}')),
-              ],
-            ),
-            trailing: IconButton(
-              icon: Icon(Icons.edit),
-              onPressed: () async {
-                String newDuration = await _showEditDialog(context, rate['duration']);
-                double newPrice = double.parse(await _showEditDialog(context, rate['price'].toString()));
-                updateRate(index, type, newDuration, newPrice);
-              },
-            ),
-          );
-        }).toList(),
-      ],
+      ),
     );
   }
 
-  // pop out edit dialogue box
-  Future<String> _showEditDialog(BuildContext context, String currentText) async {
-    TextEditingController controller = TextEditingController(text: currentText);
-    return await showDialog(
+  // 编辑对话框
+  Future<List<String>?> _showEditDialog(
+      BuildContext context, String currentDuration, String currentPrice) {
+    TextEditingController durationController = TextEditingController(text: currentDuration);
+    TextEditingController priceController = TextEditingController(text: currentPrice);
+
+    return showDialog<List<String>>(
       context: context,
-      builder: (context) {
+      builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Edit'),
-          content: TextField(
-            controller: controller,
-            keyboardType: TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(labelText: 'Enter new value'),
+          title: Text('Edit $currentDuration Rate'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: durationController,
+                decoration: InputDecoration(labelText: 'Duration'),
+              ),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: 'Price'),
+              ),
+            ],
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context, [durationController.text, priceController.text]);
+              },
               child: Text('Save'),
             ),
           ],
@@ -208,25 +326,14 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
     );
   }
 
-  Widget _buildActionButton(String label, VoidCallback onPressed) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          padding: EdgeInsets.symmetric(horizontal: 50, vertical: 20),
-      ),
-      child: Text(
-        label,
-        style: 
-          TextStyle(
-            color: Colors.white,), 
-        ),
-    );
+  // 添加新费率
+  void addNewRate(String rateType) {
+    // 根据需要实现
   }
 
-  void _logout(BuildContext context) {
-    // handle delete 
-    
-    Navigator.of(context).pop();
+  // 退出登录
+  void _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacementNamed(context, '/login');
   }
 }

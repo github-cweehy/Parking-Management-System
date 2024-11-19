@@ -1,10 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:parking_management_system/adminEditPackagesBought.dart';
 import 'package:parking_management_system/adminEditParkingSelection.dart';
 import 'package:parking_management_system/adminPSHistory.dart';
-import 'package:parking_management_system/adminPackagesBought.dart';
 import 'package:parking_management_system/adminProfile.dart';
+import 'package:parking_management_system/login.dart';
 
 
 class AdminMainPage extends StatefulWidget {
@@ -37,6 +38,10 @@ class _AdminMainPageState extends State<AdminMainPage> {
       });
     } catch (e) {
       print("Error fetching admin username: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading admin data. Please try again.')),
+      );
     }
   }
 
@@ -54,7 +59,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
       // Handle any errors that occur during sign-out
       print("Error sign out: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out. Please try again')),
+        SnackBar(content: Text('Error sign out. Please try again')),
       );
     }
   }
@@ -101,7 +106,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
               }).toList(),
               onChanged: (String? value) {
                 if (value == 'Profile') {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                       builder: (context) => AdminProfilePage(adminId: widget.adminId),
@@ -142,7 +147,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ParkingSelectionHistoryPage(),
+                        builder: (context) => ParkingSelectionHistoryPage(adminId: widget.adminId),
                       ),
                     );
                   },
