@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parking_management_system/mainpage.dart';
+import 'mainpage.dart';
 
 class CardPaymentPage extends StatefulWidget {
   final double price;
   final String userId;
+  final String? parking;
+  final String? packages;
 
-  CardPaymentPage({required this.price, required this.userId});
+  CardPaymentPage({this.packages,this.parking, required this.price, required this.userId});
 
   @override
   State<CardPaymentPage> createState() => _CardPaymentPageState();
@@ -18,7 +20,7 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
   final TextEditingController _cardNumberController = TextEditingController();
   final TextEditingController _expiryDateController = TextEditingController();
   final TextEditingController _cvcController = TextEditingController();
-  final TextEditingController _cardHolderNameController = TextEditingController(); // New controller for cardholder's name
+  final TextEditingController _cardHolderNameController = TextEditingController(); 
 
   @override
   void dispose() {
@@ -38,7 +40,7 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
     String transactionId = 'cp${idCounter.toString().padLeft(3, '0')}';
 
     await transactions.doc(transactionId).set({
-      'id': transactionId,
+      'userId': widget.userId,
       'cardHolderName': _cardHolderNameController.text,
       'cardNumber': _cardNumberController.text,
       'expiryDate': _expiryDateController.text,
@@ -46,6 +48,8 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
       'amount': widget.price,
       'timestamp': FieldValue.serverTimestamp(),
       'paymentMethod': 'Card',
+      'packages': widget.packages,
+      'parking': widget.parking,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -100,13 +104,29 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.black),
-          onPressed: () {
-            // Handle menu press
-          },
-        ),
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () async{
+              try {
+                await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(widget.parking)
+                  .delete();
+                
+                Navigator.pushReplacement(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(userId: widget.userId),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting data. Please try again.')),
+                );
+              }
+            },
+          ),
         title: Image.asset(
-          'assets/logomelaka.jpg',
+          'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,

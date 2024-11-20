@@ -178,57 +178,33 @@ class _LocationPageState extends State<LocationPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: Colors.black),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () async{
+              try {
+                await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(widget.userparkingselectionID)
+                  .delete();
+                
+                Navigator.pushReplacement(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(userId: widget.userId),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting data. Please try again.')),
+                );
+              }
             },
           ),
-        ),
         title: Image.asset(
           'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<String>(
-              underline: SizedBox(),
-              icon: Row(
-                children: [
-                  Text(
-                    username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
-                ],
-              ),
-              items: <String>['Profile', 'Logout'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? value) {
-                if (value == 'Profile') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserProfilePage(userId: widget.userId),
-                    ),
-                  );
-                } else if (value == 'Logout') {
-                  _logout(context);
-                }
-              },
-            ),
-          ),
-        ],
       ),
       drawer: Drawer(
         child: ListView(

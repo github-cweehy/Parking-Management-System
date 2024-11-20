@@ -5,8 +5,11 @@ import 'mainpage.dart';
 class OnlineBankingPage extends StatefulWidget {
   final double price;
   final String userId;
+  final String? parking;
+  final String? packages;
 
-  OnlineBankingPage({required this.price, required this.userId});
+
+  OnlineBankingPage({this.packages, this.parking, required this.price, required this.userId});
 
   @override
   State<OnlineBankingPage> createState() => _OnlineBankingPageState();
@@ -27,13 +30,15 @@ class _OnlineBankingPageState extends State<OnlineBankingPage> {
     String transactionId = 'ob${idCounter.toString().padLeft(3, '0')}';
 
     await transactions.doc(transactionId).set({
-      'id': transactionId,
+      'userId': widget.userId,
       'bankName': _bankNameController.text,
       'accountNumber': _accountNumberController.text,
       'accountNameHolder': _accountNameController.text,
       'amount': widget.price,
       'timestamp': FieldValue.serverTimestamp(),
       'paymentMethod': 'Online Banking',
+      'packages': widget.packages,
+      'parking': widget.parking,
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -57,13 +62,29 @@ class _OnlineBankingPageState extends State<OnlineBankingPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.menu, color: Colors.black),
-          onPressed: () {
-            // Handle menu press
-          },
-        ),
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () async{
+              try {
+                await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(widget.parking)
+                  .delete();
+                
+                Navigator.pushReplacement(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(userId: widget.userId),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting data. Please try again.')),
+                );
+              }
+            },
+          ),
         title: Image.asset(
-          'assets/logomelaka.jpg',
+          'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,

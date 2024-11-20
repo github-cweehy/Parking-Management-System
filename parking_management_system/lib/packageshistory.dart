@@ -2,23 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'favourite.dart';
+import 'history.dart';
+import 'packagereceipt.dart';
 import 'packages.dart';
-import 'packageshistory.dart';
-import 'parkingreceipt.dart';
+import 'package:intl/intl.dart';
 import 'mainpage.dart';
 import 'userprofile.dart';
 import 'login.dart';
 
-class HistoryPage extends StatefulWidget {
+class PackagesHistoryPage extends StatefulWidget {
   final String userId;
 
-  HistoryPage({required this.userId});
+  PackagesHistoryPage({required this.userId});
 
   @override
-  State<HistoryPage> createState() => _HistoryPageState();
+  State<PackagesHistoryPage> createState() => _PackagesHistoryPageState();
 }
 
-class _HistoryPageState extends State<HistoryPage> {
+class _PackagesHistoryPageState extends State<PackagesHistoryPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String username = '';
@@ -40,11 +41,11 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  // Fetch history records from `history parking` collection where `userId` field matches
-  Future<List<Map<String, dynamic>>> _fetchUserHistory() async {
+  // Fetch history records from `packages_bought` collection where `userId` field matches
+  Future<List<Map<String, dynamic>>> _fetchPackageHistory() async {
     final querySnapshot = await FirebaseFirestore.instance
-        .collection('history parking')
-        .where('userID', isEqualTo: widget.userId)
+        .collection('packages_bought')
+        .where('userId', isEqualTo: widget.userId)
         .get();
 
     return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
@@ -163,7 +164,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             ListTile(
               leading: Icon(Icons.history, color: Colors.red),
-              title: Text('History', style: TextStyle(color: Colors.red)),
+              title: Text('Parking History', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.push(
                   context,
@@ -213,7 +214,7 @@ class _HistoryPageState extends State<HistoryPage> {
         ),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _fetchUserHistory(),
+        future: _fetchPackageHistory(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -242,6 +243,15 @@ class _HistoryPageState extends State<HistoryPage> {
             itemCount: historyDocs.length,
             itemBuilder: (context, index) {
               var data = historyDocs[index];
+
+              // Convert Timestamp to DateTime
+              DateTime startDate = data['startDate'].toDate();
+              DateTime endDate = data['endDate'].toDate();
+              
+              // Format the dates
+              String formattedStartDate = DateFormat('yyyy-MM-dd').format(startDate);
+              String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
+
               return Card(
                 margin: EdgeInsets.all(10),
                 child: Padding(
@@ -251,26 +261,14 @@ class _HistoryPageState extends State<HistoryPage> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.location_on, color: Colors.red),
+                          Icon(Icons.calendar_month, color: Colors.red),
                           SizedBox(width: 20),
                           Text(
-                            data['location'],
+                            data['duration'],
                             style: TextStyle(
                               fontSize: 18, 
                               fontWeight: FontWeight.bold,
                               color: Colors.green),
-                          ),
-                          SizedBox(width: 240),
-                          Container(
-                            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.green[400],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              data['pricingOption'],
-                              style: TextStyle(color: Colors.white),
-                            ),
                           ),
                         ],
                       ),
@@ -286,11 +284,11 @@ class _HistoryPageState extends State<HistoryPage> {
                               Column(
                                 children: [
                                   Text(
-                                    "Start: ${data['startTime']}",
+                                    "Start Date : $formattedStartDate",
                                     style: TextStyle(fontSize: 14, color: Colors.grey[800]),
                                   ),
                                   Text(
-                                    "End  : ${data['endTime']}",
+                                    "End Date  : $formattedEndDate",
                                     style: TextStyle(fontSize: 14, color: Colors.grey[800]),
                                   )
                                 ],
@@ -304,7 +302,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              data['vehiclePlateNum'],
+                              data['vehiclePlate'],
                               style: TextStyle(
                                 fontSize: 15,
                                 color: Colors.white,
@@ -332,12 +330,12 @@ class _HistoryPageState extends State<HistoryPage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ParkingReceiptPage(
-                                  district: data['location'] ?? 'Unknown location',
-                                  startTime: data['startTime'] ?? 'N/A',
-                                  endTime: data['endTime'] ?? 'N/A',
+                                builder: (context) => PackageReceiptPage(
+                                  duration: data['duration'] ?? 'Unknown package',
+                                  startDate: '$formattedStartDate',
+                                  endDate: '$formattedEndDate',
                                   amount: data['price'] ?? 0,
-                                  type: data['type'] ?? 'N/A',
+                                  vehiclePlate: data['vehiclePlate'] ?? 'N/A',
                                 ),
                               ),
                             );
@@ -354,13 +352,14 @@ class _HistoryPageState extends State<HistoryPage> {
                                 Icon(Icons.save_alt, color: Colors.white),
                                 Text(
                                   'Receipt',
-                                  style: TextStyle(fontSize: 16, color: Colors.white)
+                                  style: TextStyle(fontSize: 16, color: Colors.white,)
                                 ),
                               ],
                             ),
                           ),
                         ),
                       ),
+
                     ],
                   ),
                 ),

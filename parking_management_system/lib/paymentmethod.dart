@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:parking_management_system/eWallet.dart';
-import 'package:parking_management_system/onlinebanking.dart';
+import 'eWallet.dart';
+import 'onlinebanking.dart';
 import 'creditcard.dart';
 import 'history.dart';
 import 'mainpage.dart';
@@ -11,10 +11,21 @@ import 'login.dart';
 
 class PaymentMethodPage extends StatefulWidget{
   final String userId;
-  final String userparkingselectionID;
+  final String? userparkingselectionID;
   final double price;
+  final String? duration;
+  final String source;
+  final String? packageId;
 
-  PaymentMethodPage({required this.userparkingselectionID, required this.userId, required this.price});
+  PaymentMethodPage({
+    this.packageId, 
+    required this.source, 
+    this.duration, 
+    this.userparkingselectionID, 
+    required this.userId, 
+    required this.price
+    }
+  );
 
   @override
   _PaymentMethodPageState createState() => _PaymentMethodPageState();
@@ -69,57 +80,33 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: Colors.black),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: () async{
+              try {
+                await FirebaseFirestore.instance
+                  .collection('history parking')
+                  .doc(widget.userparkingselectionID)
+                  .delete();
+                
+                Navigator.pushReplacement(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => MainPage(userId: widget.userId),
+                  ),
+                );
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error deleting data. Please try again.')),
+                );
+              }
             },
           ),
-        ),
         title: Image.asset(
           'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<String>(
-              underline: SizedBox(),
-              icon: Row(
-                children: [
-                  Text(
-                    username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
-                ],
-              ),
-              items: <String>['Profile', 'Logout'].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? value) {
-                if (value == 'Profile') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => UserProfilePage(userId: widget.userId),
-                    ),
-                  );
-                } else if (value == 'Logout') {
-                  _logout(context);
-                }
-              },
-            ),
-          ),
-        ],
       ),
       // Add the drawer here
       drawer: Drawer(
@@ -195,8 +182,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
       ),
       body: Padding(
         padding: EdgeInsets.all(20.0),
-        child: 
-        Column(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -211,12 +197,19 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Use the userParkingSelectionID to update the correct document
-                  DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
-                      .collection('history parking')
-                      .doc(widget.userparkingselectionID);  // Use the passed ID
+                  // Determine the collection and document ID
+                  String collection = widget.source == 'history' ? 'history parking' : 'packages_bought';
+                  String? documentId = widget.source == 'history' 
+                      ? widget.userparkingselectionID 
+                      : widget.packageId;
 
-                  await parkingSelectionDocRef.update({
+                  if (documentId == null) {
+                    throw "Document ID is null for the selected source.";
+                  }
+
+                  DocumentReference docRef = FirebaseFirestore.instance.collection(collection).doc(documentId);
+                  
+                  await docRef.update({
                     'payment method': 'Card Payment',
                   });
                   print("Data saved successfully.");
@@ -224,7 +217,12 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => CardPaymentPage(price:widget.price, userId: widget.userId),
+                      builder: (context) => CardPaymentPage(
+                        packages:widget.packageId, 
+                        parking:widget.userparkingselectionID, 
+                        price:widget.price, 
+                        userId: widget.userId
+                        ),
                       ),
                     );
                 } catch(e){
@@ -260,12 +258,19 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Use the userParkingSelectionID to update the correct document
-                  DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
-                      .collection('history parking')
-                      .doc(widget.userparkingselectionID);  // Use the passed ID
+                  // Determine the collection and document ID
+                  String collection = widget.source == 'history' ? 'history parking' : 'packages_bought';
+                  String? documentId = widget.source == 'history' 
+                      ? widget.userparkingselectionID 
+                      : widget.packageId;
 
-                  await parkingSelectionDocRef.update({
+                  if (documentId == null) {
+                    throw "Document ID is null for the selected source.";
+                  }
+
+                  DocumentReference docRef = FirebaseFirestore.instance.collection(collection).doc(documentId);
+
+                  await docRef.update({
                     'payment method': 'Online Banking',
                   });
                   print("Data saved successfully.");
@@ -273,7 +278,12 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => OnlineBankingPage(price:widget.price, userId: widget.userId),
+                      builder: (context) => OnlineBankingPage(
+                        packages:widget.packageId, 
+                        parking:widget.userparkingselectionID, 
+                        price:widget.price, 
+                        userId: widget.userId
+                        ),
                       ),
                     );
                 } catch(e){
@@ -309,12 +319,19 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Use the userParkingSelectionID to update the correct document
-                  DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
-                      .collection('history parking')
-                      .doc(widget.userparkingselectionID);  // Use the passed ID
+                  // Determine the collection and document ID
+                  String collection = widget.source == 'history' ? 'history parking' : 'packages_bought';
+                  String? documentId = widget.source == 'history' 
+                      ? widget.userparkingselectionID 
+                      : widget.packageId;
 
-                  await parkingSelectionDocRef.update({
+                  if (documentId == null) {
+                    throw "Document ID is null for the selected source.";
+                  }
+
+                  DocumentReference docRef = FirebaseFirestore.instance.collection(collection).doc(documentId);
+                  
+                  await docRef.update({
                     'payment method': 'E-wallet',
                   });
                   print("Data saved successfully.");
@@ -322,7 +339,12 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EWalletPaymentPage(price:widget.price, userId: widget.userId),
+                      builder: (context) => EWalletPaymentPage(
+                        packages:widget.packageId, 
+                        parking:widget.userparkingselectionID, 
+                        price:widget.price, 
+                        userId: widget.userId
+                        ),
                       ),
                     );
                 } catch(e){
@@ -354,7 +376,12 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
               ),
             ),
             SizedBox(height: 70),
-            CancelButton(userParkingSelectionID: widget.userparkingselectionID, userId: widget.userId),
+            CancelButton(
+              source:widget.source, 
+              userParkingSelectionID: 
+              widget.userparkingselectionID, 
+              userId: widget.userId
+            ),
           ],
         ),
       ),
@@ -363,10 +390,12 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
 }
 
 class CancelButton extends StatelessWidget {
-  final String userParkingSelectionID;
+  final String? userParkingSelectionID;
   final String userId;
+  final String? packageId;
+  final String source;
 
-  CancelButton({required this.userParkingSelectionID, required this.userId});
+  CancelButton({this.userParkingSelectionID, this.packageId, required this.userId, required this.source});
 
   @override
   Widget build(BuildContext context) {
@@ -383,12 +412,14 @@ class CancelButton extends StatelessWidget {
           ),
           onPressed: () async {
             try {
-              // Delete the document from Firestore
-              await FirebaseFirestore.instance
-                  .collection('history parking')
-                  .doc(userParkingSelectionID)
-                  .delete();
+              String collection = source == 'history' ? 'history parking' : 'packages_bought';
+              String? documentId = source == 'history' ? userParkingSelectionID : packageId;
+              
+              if (documentId == null) {
+                throw "Document ID is null for the selected source.";
+              }
 
+              await FirebaseFirestore.instance.collection(collection).doc(documentId).delete();
               print("Document deleted successfully.");
 
               // Navigate back to the main page
