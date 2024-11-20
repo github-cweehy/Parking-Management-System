@@ -1,11 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminEditPackagesBought.dart';
-import 'package:parking_management_system/adminEditParkingSelection.dart';
-import 'package:parking_management_system/adminPSHistory.dart';
-import 'package:parking_management_system/adminProfile.dart';
-import 'package:parking_management_system/login.dart';
+import 'package:parking_management_system/adminPBHistory.dart';
+import 'adminEditPackagesBought.dart';
+import 'adminEditParkingSelection.dart';
+import 'adminPSHistory.dart';
+import 'adminProfile.dart';
+import 'login.dart';
+
 
 
 class AdminMainPage extends StatefulWidget {
@@ -162,6 +164,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
               ],
             ),
             SizedBox(height: 20),
+
             // Packages Bought Card
             CustomCard(
               title: 'Packages Bought',
@@ -183,6 +186,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   text: 'Packages Bought History',
                   onTap: () {
                     // Handle Packages Bought History tap
+                    Navigator.push(
+                      context, 
+                      MaterialPageRoute(
+                        builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
+                      ),
+                    );
                   },
                 ),
                 OptionItem(

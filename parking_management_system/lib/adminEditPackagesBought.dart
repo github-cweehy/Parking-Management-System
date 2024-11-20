@@ -3,7 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:parking_management_system/adminMainPage.dart';
 import 'package:parking_management_system/adminProfile.dart';
-import 'package:parking_management_system/login.dart';
+import 'login.dart';
+
 
 class EditPackagesBoughtPage extends StatefulWidget {
   final String adminId;
@@ -16,13 +17,9 @@ class EditPackagesBoughtPage extends StatefulWidget {
 
 class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  TextEditingController durationController = TextEditingController();
-  TextEditingController priceController = TextEditingController();
-
+  String admin_username = '';
 
   List<Map<String, dynamic>> monthly = [];
-  String admin_username = '';
 
   @override
   void initState() {
@@ -56,7 +53,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
         if (snapshot.exists) {
           rates.add({
             'duration': duration.replaceAll('-', ' ').split(' ').map((word) => word[0].toUpperCase() + word.substring(1)).join(' '),
-            'price': double.parse(snapshot['price'].toString()).toStringAsFixed(2),
+            'price': snapshot['price'].toDouble(),
             'docId': duration, 
           });
         }
@@ -68,6 +65,25 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
       print("Error fetching rates: $e");
     }
   }
+
+  void _logout(BuildContext context) async{
+    try {
+      // Sign out from Firebase Authentication
+      await FirebaseAuth.instance.signOut();
+      
+      // Navigate to LoginPage and replace the current page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    } catch (e) {
+      // Handle any errors that occur during sign-out
+      print("Error signing out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out. Please try again.')),
+      );
+    }
+  }  
 
 
   // Save changes to Firebase
@@ -88,7 +104,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
   // Show dialog to edit price
   void _showEditDialog(BuildContext context, int index) {
     TextEditingController priceController = TextEditingController(
-      text: monthly[index]['price'].toString(),
+      text: monthly[index]['price'].toStringAsFixed(2),
     );
 
     showDialog(
@@ -118,7 +134,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                   double ? newPrice = double.tryParse(priceController.text);
 
                   if(newPrice != null){
-                    monthly[index]['price'] = newPrice.toStringAsFixed(2);
+                    monthly[index]['price'] = newPrice;
                   }
                 });
                 Navigator.of(context).pop(); // Close dialog
@@ -131,302 +147,176 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
     );
   }
 
-  //show dialog to add new package
-  void _showAddDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Add New Package"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: durationController,
-                decoration: InputDecoration(
-                  labelText: "Enter duration (e.g., 1-month)",
-                ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.menu, color: Colors.black),
+          onPressed: () {
+            // Handle Menu press
+            Scaffold.of(context).openDrawer();
+          },
+        ),
+        title: Image.asset(
+          'assets/logomelaka.jpg', 
+          height: 60,
+        ),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            child: DropdownButton<String>(
+              underline: SizedBox(),
+              icon: Row(
+                children: [
+                  Text(
+                    admin_username,
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.black,
+                  ),
+                ],
               ),
-              TextField(
-                controller: priceController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Enter price (e.g., 50.00)",
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                String duration = durationController.text.trim();
-                double? price = double.tryParse(priceController.text.trim());
-
-                if (duration.isNotEmpty && price != null && price > 0) {
-                  String formattedDuration = duration.replaceAll(' ', '-').toLowerCase();
-
-                  _updatePackagesToFirebase(formattedDuration, price);
-
-                  Navigator.of(context).pop();
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Packages added successfully!")),
+              items: <String>['Profile', 'Logout'].map((String value) {
+                return DropdownMenuItem<String>(
+                  value: value,
+                  child: Text(value),
+                );
+              }).toList(),
+              onChanged: (String? value) {
+                if (value == 'Profile') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                    ),
                   );
-                } 
-                else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Invalid input. Please try again.")),
-                  );
+                } else if (value == 'Logout') {
+                  // Navigate to profile
+                  _logout(context);
                 }
               },
-              child: Text("Add"),
             ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _updatePackagesToFirebase(String duration, double price) async {
-    try {
-      String docId = duration.replaceAll(' ', '-').toLowerCase();
-
-      // update data to firebase
-      await _firestore.collection('packagesprice').doc(docId).set({
-        'price': price,
-      });
-
-      // get latest data from firbase to refresh page
-      _fetchRatesFromFirebase();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Packages added successfully!')),
-      );
-
-      // clear input text
-      setState(() {
-        durationController.clear();
-        priceController.clear();
-      });
-    } catch (e) {
-      print("Error updating packages to Firebase: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error adding packages. Please try again.')),
-      );
-    }
-  }
-
-
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: IconButton(
-        icon: Icon(Icons.menu, color: Colors.black),
-        onPressed: () {
-          // Handle Menu press
-        },
+          )
+        ],
       ),
-      title: Image.asset(
-        'assets/logomelaka.jpg', // Replace with your logo path
-        height: 60,
-      ),
-      centerTitle: true,
-      actions: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: DropdownButton<String>(
-            underline: SizedBox(),
-            icon: Row(
+
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Text(
-                  admin_username,
-                  style: TextStyle(color: Colors.black),
+                IconButton(
+                  icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
                 ),
-                Icon(
-                  Icons.arrow_drop_down,
-                  color: Colors.black,
+                SizedBox(width: 10),
+                Text(
+                  "Edit Packages Bought",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            items: <String>['Profile', 'Logout'].map((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
-            }).toList(),
-            onChanged: (String? value) {
-              // Handle dropdown selection
-              if (value == 'Profile') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AdminProfilePage(adminId: widget.adminId),
-                  ),
-                );
-              } else if (value == 'Logout') {
-                // Navigate to profile
-                _logout(context);
-              }
-            },
-          ),
-        )
-      ],
-    ),
-
-    body: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                icon: Icon(Icons.arrow_back_ios, color: Colors.black),
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-              ),
-              SizedBox(width: 10),
-              Text(
-                "Edit Packages Bought",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          
-          Expanded(
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(
-                      color: Colors.grey.shade300, // border color
-                      width: 1.0,         //border width
+            SizedBox(height: 8),
+            
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: Colors.grey.shade400, 
+                        width: 1.0,       
+                      ),
+                      borderRadius: BorderRadius.circular(10), 
                     ),
-                    borderRadius: BorderRadius.circular(10), 
-                  ),
-                  child: ListView.builder(
-                    itemCount: monthly.length,
-                    padding: const EdgeInsets.all(8.0),
-                    itemBuilder: (context, index) {
-                      final rate = monthly[index];
-                      return Card(
-                        color: Colors.red,
-                        margin: EdgeInsets.symmetric(vertical: 8),
-                        child: ListTile(
-                          leading: Icon(Icons.access_time, color: Colors.white),
-                          title: Text(
-                            "${rate['duration']}",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                "RM ",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              SizedBox(width: 2),
-                              SizedBox(
-                                width: 60,
-                                child: Text(
-                                  "${rate['price']}",
-                                  textAlign: TextAlign.right,
+                    child: ListView.builder(
+                      itemCount: monthly.length,
+                      padding: const EdgeInsets.all(8.0),
+                      itemBuilder: (context, index) {
+                        final rate = monthly[index];
+                        return Card(
+                          color: Colors.red,
+                          margin: EdgeInsets.symmetric(vertical: 8),
+                          child: ListTile(
+                            leading: Icon(Icons.access_time, color: Colors.white),
+                            title: Text(
+                              "${rate['duration']}",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  "RM ",
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
                                   ),
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 2),
+                                SizedBox(
+                                  width: 60,
+                                  child: Text(
+                                    monthly[index]['price'].toStringAsFixed(2),
+                                    textAlign: TextAlign.right,
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(Icons.edit, color: Colors.white),
+                                  onPressed: () async{
+                                    _showEditDialog(context, index);
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
-                          onTap: () => _showEditDialog(context, index),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-    bottomNavigationBar: Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                String duration = durationController.text.trim();
-                double price = double.tryParse(priceController.text) ?? 0.0;
-
-                if (duration.isNotEmpty && price > 0) {
-                  String formattedDuration = duration.replaceAll(' ', '-').toLowerCase();
-
-                  monthly.add({
-                    'duration': duration,
-                    'price': price.toStringAsFixed(2),
-                    'docId': formattedDuration,
-                  });
-
-                  _updatePackagesToFirebase(formattedDuration, price);
-                }
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              fixedSize: Size(100, 45),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                ],
               ),
             ),
-            child: Text(
-              "Add",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-
-          ElevatedButton(
-            onPressed: saveChanges,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              fixedSize: Size(100, 45),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ) // Background color
-            ),
-            child: Text(
-              "Save",
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
-
-void _logout(BuildContext context) async {
-    await FirebaseAuth.instance.signOut();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => LoginPage()),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            ElevatedButton(
+              onPressed: saveChanges,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                fixedSize: Size(100, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ) // Background color
+              ),
+              child: Text(
+                "Save",
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

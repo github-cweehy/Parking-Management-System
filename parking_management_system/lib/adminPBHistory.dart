@@ -1,22 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminEditPackagesBought.dart';
-import 'package:parking_management_system/adminMainPage.dart';
-import 'package:parking_management_system/adminProfile.dart';
+import 'adminProfile.dart';
 import 'login.dart';
 
-
-class ParkingSelectionHistoryPage extends StatefulWidget {
+class PackagesBoughtHistoryPage extends StatefulWidget{
   final String adminId;
 
-  ParkingSelectionHistoryPage({required this.adminId});
+  PackagesBoughtHistoryPage({required this.adminId});
 
   @override
-  _ParkingSelectionHistoryPageState createState() => _ParkingSelectionHistoryPageState();
+  _PackagesBoughtHistoryPage createState() => _PackagesBoughtHistoryPage();
 }
 
-class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPage> {
+class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage>{
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String username = ''; 
@@ -27,7 +24,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   Timestamp? startTimestamp;
   Timestamp? endTimestamp;
 
-  @override
+    @override
   void initState(){
     super.initState();
     _fetchUsername();
@@ -35,7 +32,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     endTimestamp = Timestamp.fromDate(endDate);
   }
 
-  Future<void> _fetchUsername() async {
+    Future<void> _fetchUsername() async {
     try {
       final adminDoc = await FirebaseFirestore.instance
         .collection('admins')
@@ -53,7 +50,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     }
   }
 
-  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    Future<void> _selectDate(BuildContext context, bool isStartDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: isStartDate ? startDate : endDate,
@@ -74,7 +71,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     }
   }
 
-  Stream<QuerySnapshot> getFilteredData() {
+    Stream<QuerySnapshot> getFilteredData() {
     return _firestore
       .collection('history parking')
       .where('date', isGreaterThanOrEqualTo: startTimestamp)
@@ -82,7 +79,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
       .snapshots();
   }
 
-  void _logout(BuildContext context) async{
+    void _logout(BuildContext context) async{
     try {
       // Sign out from Firebase Authentication
       await FirebaseAuth.instance.signOut();
@@ -102,7 +99,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   } 
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context){
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -110,15 +107,15 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
         leading: IconButton(
           icon: Icon(Icons.menu, color: Colors.black),
           onPressed: () {
-            //Handle Menu press
+            //Handle Menu Press
           },
         ),
 
         title: Image.asset(
-          'assets/logomelaka.jpg', 
-          height: 60
+          'assets/logomelaka.jpg',
+          height: 60,
         ),
-        
+
         centerTitle: true,
         actions: [
           Padding(
@@ -131,13 +128,13 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                   Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
-              items: ['Profile', 'Logout'].map((String value) {
+              items: ['Profile', 'Logout'].map((String value){
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
                 );
               }).toList(),
-              onChanged: (String? value) {
+              onChanged: (String? value){
                 if (value == 'Profile') {
                   Navigator.pushReplacement(
                     context,
@@ -167,11 +164,11 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                     Navigator.pop(context);
                   },
                 ),
-                Text("Parking Selection History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text("Packages Bought History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
               ],
             ),
             SizedBox(height: 8),
-            
+
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -255,27 +252,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
               ],
             ),
 
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: getFilteredData(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text("Error loading data."));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return Center(child: Text("No data found!"));
-                  }
-                  return ListView(
-                    children: snapshot.data!.docs.map((doc) {
-                      return _buildParkingCard(doc);
-                    }).toList(),
-                  );
-                },
-              ),
-            ),
+
           ],
         ),
       ),
@@ -290,34 +267,8 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     return monthNames[month - 1];
   }
 
-  Widget _buildParkingCard(QueryDocumentSnapshot doc) {
-    return Card(
-      color: Colors.red,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: Colors.white,
-              child: Icon(Icons.person, color: Colors.black),
-            ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(doc['username'], style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 4),
-                  Text("Packages: ${doc['packagesType']} RM ${doc['amount']}", style: TextStyle(color: Colors.white)),
-                ],
-              ),
-            ),
-            Icon(Icons.more_horiz, color: Colors.white),
-          ],
-        ),
-      ),
-    );
-  }
+
+
+
+
 }
