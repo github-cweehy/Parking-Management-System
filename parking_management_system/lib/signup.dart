@@ -253,8 +253,11 @@ class _SignUpPageState extends State<SignUpPage> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';
                       }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters long';
+                      if (value.length < 12 || value.length > 15) {
+                        return 'Password must be between 12-15 characters long';
+                      }
+                      if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$&*~]).{12,15}$').hasMatch(value)) {
+                        return 'Password must include at least 1 uppercase, 1 lowercase, 1 number, and 1 special character';
                       }
                       return null;
                     },

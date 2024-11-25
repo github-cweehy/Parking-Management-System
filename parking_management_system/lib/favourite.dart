@@ -267,7 +267,7 @@ class _FavouritePageState extends State<FavouritePage> {
                               fontWeight: FontWeight.bold, 
                               color: Colors.green),
                           ),
-                          SizedBox(width: 250),
+                          SizedBox(width: 230),
                           Container(
                             padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(

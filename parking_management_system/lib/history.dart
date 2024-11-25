@@ -260,7 +260,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               fontWeight: FontWeight.bold,
                               color: Colors.green),
                           ),
-                          SizedBox(width: 240),
+                          SizedBox(width: 225),
                           Container(
                             padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                             decoration: BoxDecoration(

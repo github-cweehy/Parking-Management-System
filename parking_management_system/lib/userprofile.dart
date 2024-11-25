@@ -248,6 +248,141 @@ void _setDefaultVehicle(String registrationNumber) async {
     );
   }
 
+  void showPasswordChangeDialog(){
+    TextEditingController currentPasswordController = TextEditingController();
+    TextEditingController newPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context, 
+      builder: (context){
+        return AlertDialog(
+          title: Text('Change Password'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: currentPasswordController,
+                  obscureText: false,
+                  decoration: InputDecoration(
+                    labelText: 'Current Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your current password';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 15),
+
+                TextFormField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your password';
+                    }
+                    if (value.length < 12 || value.length > 15) {
+                      return 'at least 12-15 characters';
+                    }
+                    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$&*~]).{12,15}$').hasMatch(value)) {
+                      return 'at least 1 uppercase & lowercase,\n'
+                             '1 number, and 1 special character';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: (){
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    await changePassword(
+                      currentPasswordController.text.trim(),
+                      newPasswordController.text.trim(),
+                    );
+                  }
+                }, 
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'Change',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    try {
+      // Fetch the current password from Firestore
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data() as Map<String, dynamic>;
+        if (data['password'] == currentPassword) {
+          // Update the password in Firestore
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(widget.userId)
+              .update({'password': newPassword});
+
+          _showSnackBar("Password updated successfully.");
+          Navigator.pop(context); // Close the dialog
+        } else {
+          _showSnackBar("Current password is incorrect.");
+        }
+      }
+    } catch (e) {
+      print("Error changing password: $e");
+      _showSnackBar("Failed to update password.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -435,7 +570,7 @@ void _setDefaultVehicle(String registrationNumber) async {
 
                         // Change Password Button
                         _buildActionButton('Change Password', () {
-                          // Handle password change
+                          showPasswordChangeDialog();
                         }),
                       ],
                     ),
