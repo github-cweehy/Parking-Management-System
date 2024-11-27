@@ -58,6 +58,27 @@ class _MainPageState extends State<MainPage> {
 
       for (var doc in querySnapshot.docs) {
         final parkingData = doc.data() as Map<String, dynamic>;
+
+        // Parse and validate endTime
+        dynamic endTime = parkingData['endTime'];
+        if (endTime is String) {
+          // Parse string to DateTime
+          try {
+            endTime = Timestamp.fromDate(DateTime.parse(endTime));
+          } catch (e) {
+            print("Error parsing endTime for document ${doc.id}: $e");
+            continue; // Skip this document
+          }
+        }
+
+        Timestamp? endTimestamp = endTime is Timestamp ? endTime : null;
+
+        // Filter out expired entries
+        if (endTimestamp == null || endTimestamp.toDate().isBefore(DateTime.now())) {
+          print("Skipping expired parking ID: ${doc.id}");
+          continue; // Skip expired parking
+        }
+
         final favDoc = await _firestore.collection('favourite').doc(doc.id).get();
 
         fetchedHistory.add({
@@ -299,7 +320,7 @@ class _MainPageState extends State<MainPage> {
               Icon(Icons.access_time, color: Colors.red),
               SizedBox(width: 10),
               Text(
-                '${parkingData['startTime'] ?? ''}\n${parkingData['endTime'] ?? ''}',
+                "${parkingData['startTime']}\n${parkingData['endTime']}",
                 style: TextStyle(fontSize: 16),
               ),
               Spacer(),
