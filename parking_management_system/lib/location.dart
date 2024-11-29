@@ -144,10 +144,9 @@ class _LocationPageState extends State<LocationPage> {
 
   void _confirmLocation() async {
     try {
-      // Use the userParkingSelectionID to update the correct document
       DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
           .collection('history parking')
-          .doc(widget.userparkingselectionID);  // Use the passed ID
+          .doc(widget.userparkingselectionID);  
 
       await parkingSelectionDocRef.update({
         'location': _currentStreet,
