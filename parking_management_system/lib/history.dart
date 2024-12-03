@@ -247,20 +247,18 @@ class _HistoryPageState extends State<HistoryPage> {
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Icon(Icons.location_on, color: Colors.red),
-                          SizedBox(width: 20),
+                          // Icon(Icons.location_on, color: Colors.red),
                           Text(
-                            data['location'],
+                            data['location'] ?? 'Unknown location',
                             style: TextStyle(
                               fontSize: 18, 
                               fontWeight: FontWeight.bold,
                               color: Colors.green),
                           ),
-                          SizedBox(width: 225),
                           Container(
                             padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                             decoration: BoxDecoration(
@@ -304,7 +302,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              data['vehiclePlateNum'],
+                              data['vehiclePlateNum'] ?? 'Unknown vehiclePlateNum',
                               style: TextStyle(
                                 fontSize: 15,
                                 color: Colors.white,
@@ -319,7 +317,7 @@ class _HistoryPageState extends State<HistoryPage> {
                           Icon(Icons.price_change, color: Colors.red),
                           SizedBox(width: 10),
                           Text(
-                            "RM ${data['price']}",
+                            "RM ${data['price'] ?? 'Unknown price'}",
                             style: TextStyle(fontSize: 16, color: Colors.black),
                           ),
                         ],

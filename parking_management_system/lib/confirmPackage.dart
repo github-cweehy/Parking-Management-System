@@ -89,6 +89,32 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
 
   Future<String?> _savePackageToFirestore() async {
     try {
+      if (selectedPlate == null || selectedPlate!.isEmpty) {
+        throw Exception("Vehicle plate is null or empty.");
+      }
+
+      // Check if there's already an active package for the selected plate
+      final existingPackageQuery = await FirebaseFirestore.instance
+          .collection('packages_bought')
+          .where('vehiclePlate', isEqualTo: selectedPlate)
+          .where('endDate', isGreaterThanOrEqualTo: Timestamp.fromDate(DateTime.now()))
+          .get();
+
+      if (existingPackageQuery.docs.isNotEmpty) {
+        // Show an error message if there's already an active package
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "This vehicle plate already has an active package.",
+              style: TextStyle(color: Colors.white)),
+            backgroundColor: Colors.red,
+          ),
+        );
+        // Navigate back to the package selection page
+        Navigator.pop(context);
+        return null;
+      }
+
       DocumentReference docRef = await FirebaseFirestore.instance
         .collection('packages_bought')
         .add({
@@ -213,6 +239,10 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
                       }
 
                       String? packageId = await _savePackageToFirestore();
+
+                      if (packageId == null) {
+                        return; // Do not navigate further
+                      }
 
                        Navigator.push(
                         context,

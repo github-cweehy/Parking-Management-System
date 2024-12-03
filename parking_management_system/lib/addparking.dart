@@ -513,10 +513,25 @@ Future<void> _fetchPricing() async {
                         DateTime endDateTime = DateTime(
                           endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
 
-                        // Use the userParkingSelectionID to update the correct document
+                        // Check if there's any ongoing parking session for the same plate number
+                        QuerySnapshot ongoingParkings = await FirebaseFirestore.instance
+                            .collection('history parking')
+                            .where('vehiclePlateNum', isEqualTo: selectedPlate)
+                            .where('endTime', isGreaterThan: DateTime.now().toString())
+                            .get();
+
+                        if (ongoingParkings.docs.isNotEmpty) {
+                          // If there are unexpired parking sessions, show an error message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('This vehicle already has an active parking session.')),
+                          );
+                          return;
+                        }
+
+                        // Proceed to save the parking details if no conflicts are found
                         DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
                             .collection('history parking')
-                            .doc(widget.userparkingselectionID);  // Use the passed ID
+                            .doc(widget.userparkingselectionID);
 
                         await parkingSelectionDocRef.update({
                           'vehiclePlateNum': selectedPlate,
@@ -524,6 +539,7 @@ Future<void> _fetchPricing() async {
                           'startTime': startDateTime.toString(),
                           'endTime': endDateTime.toString(),
                         });
+
                         print("Data saved successfully.");
                         
                         scheduleNotification();
