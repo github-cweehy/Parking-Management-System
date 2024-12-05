@@ -1,42 +1,68 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminMainPage.dart';
-import 'package:parking_management_system/adminProfile.dart';
+import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
+import 'adminProfile.dart';
 import 'login.dart';
 
-
-class EditPackagesBoughtPage extends StatefulWidget {
+class CustomerListPage extends StatefulWidget {
   final String adminId;
 
-  EditPackagesBoughtPage({required this.adminId});
+  CustomerListPage({required this.adminId});
 
   @override
-  _EditPackagesBoughtPageState createState() => _EditPackagesBoughtPageState();
+  _CustomerListPage createState() => _CustomerListPage();
 }
 
-class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
+class _CustomerListPage extends State<CustomerListPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
 
-  List<Map<String, dynamic>> monthly = [];
+  List<Map<String, dynamic>> usersData = [];
+
+  final Map<String, String> _usernameCache = {};
+  Future<String> _fetchUsername(String userId) async{
+    if(_usernameCache.containsKey(userId)){
+      return _usernameCache[userId]!;
+    }
+
+    try{
+      DocumentSnapshot userSnapshot = await _firestore.collection('users').doc(userId).get();
+      if(userSnapshot.exists){
+        String username = userSnapshot['username'] ?? 'Unknown User';
+        setState(() {
+          _usernameCache[userId] = username;
+        });
+        
+        return username;
+      }
+      else{
+        return 'Unknown User';
+      }
+    }catch(e){
+      print('Error fetching username for userId $userId: $e');
+      return 'Unknown User';
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _fetchRatesFromFirebase();
     _fetchAdminUsername();
+    _fetchUserData();
   }
 
   // Fetch admin username from Firebase
   void _fetchAdminUsername() async {
     try {
-      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
+      DocumentSnapshot snapshot =
+          await _firestore.collection('admins').doc(widget.adminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['admin_username'];
@@ -47,27 +73,21 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
     }
   }
 
-  // Fetch rates data from Firebase
-  void _fetchRatesFromFirebase() async {
+  //Load all user data at once
+  void _fetchUserData() async {
     try {
-      List<Map<String, dynamic>> rates = [];
-      QuerySnapshot querySnapshot = await _firestore.collection('packagesprice').get();
-
-      for (String duration in ['1-month', '3-month', '6-month']) {
-        DocumentSnapshot snapshot = await _firestore.collection('packagesprice').doc(duration).get();
-        if (snapshot.exists) {
-          rates.add({
-            'duration': duration.replaceAll('-', ' ').split(' ').map((word) => word[0].toUpperCase() + word.substring(1)).join(' '),
-            'price': snapshot['price'].toDouble(),
-            'docId': duration, 
-          });
-        }
-      }
+      QuerySnapshot snapshot = await _firestore.collection('users').get();
       setState(() {
-        monthly = rates;
+        usersData = snapshot.docs.map((doc){ 
+          return{
+            'username': doc['username'] ?? 'Unknown User',
+            'email': doc['email'] ?? 'Unknown Email',
+            'phone_number': doc['phone_number'] ?? 'Unknown PhoneNumber',
+          };
+        }).toList();
       });
     } catch (e) {
-      print("Error fetching rates: $e");
+      print("Error fetching user data: $e");
     }
   }
 
@@ -88,69 +108,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
         SnackBar(content: Text('Error signing out. Please try again.')),
       );
     }
-  }  
-
-
-  // Save changes to Firebase
-  void saveChanges() async {
-    try {
-      for (var rate in monthly) {
-        await _firestore.collection('packagesprice').doc(rate['docId']).update({
-          'price': rate['price'],
-        });
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Prices saved successfully!')));
-    } catch (e) {
-      print("Error saving changes: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error saving changes. Please try again!")));
-    }
-  }
-
-  // Show dialog to edit price
-  void _showEditDialog(BuildContext context, int index) {
-    TextEditingController priceController = TextEditingController(
-      text: monthly[index]['price'].toStringAsFixed(2),
-    );
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Edit Price for ${monthly[index]['duration']}"),
-          content: TextField(
-            controller: priceController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: "Enter new price",
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-              },
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  // Validate the price input is valid
-                  double ? newPrice = double.tryParse(priceController.text);
-
-                  if(newPrice != null){
-                    monthly[index]['price'] = newPrice;
-                  }
-                });
-                Navigator.of(context).pop(); // Close dialog
-              },
-              child: Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  } 
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +125,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
           ),
         ),
         title: Image.asset(
-          'assets/logomelaka.jpg', 
+          'assets/logomelaka.jpg',
           height: 60,
         ),
         centerTitle: true,
@@ -175,17 +133,11 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<String>(
-              underline: SizedBox(),
+              underline: Container(),
               icon: Row(
                 children: [
-                  Text(
-                    admin_username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
+                  Text(admin_username, style: TextStyle(color: Colors.black)),
+                  Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
               items: <String>['Profile', 'Logout'].map((String value) {
@@ -203,12 +155,11 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                     ),
                   );
                 } else if (value == 'Logout') {
-                  // Navigate to profile
                   _logout(context);
                 }
               },
             ),
-          )
+          ),
         ],
       ),
       drawer: Drawer(
@@ -288,7 +239,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined, color: Colors.black, size: 23),
+              leading: Icon(Icons.payment, color: Colors.black, size: 23),
               title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
@@ -325,7 +276,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined, color: Colors.black, size: 23),
+              leading: Icon(Icons.payment, color: Colors.black, size: 23),
               title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
@@ -337,11 +288,23 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               },
             ),
 
+            ListTile(
+              leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
+              title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => CustomerListPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
           ],
         )
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -353,104 +316,86 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                     Navigator.pop(context);
                   },
                 ),
-                SizedBox(width: 10),
                 Text(
-                  "Edit Packages Bought",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  "User Data List",
+                  style: TextStyle(
+                    fontSize: 20, 
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
             SizedBox(height: 8),
+
             
             Expanded(
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: Colors.grey.shade400, 
-                        width: 1.0,       
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(
+                    color: Colors.grey,
+                    width: 1.0,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListView.builder(
+                  itemCount: usersData.length,
+                  padding: const EdgeInsets.all(8.0),
+                  itemBuilder: (context, index){
+
+                    var user = usersData[index];
+                    var username = user['username'];
+                    var email = user['email'];
+                    var phonenum = user['phone_number'];
+
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade400, width: 1.0),
                       ),
-                      borderRadius: BorderRadius.circular(10), 
-                    ),
-                    child: ListView.builder(
-                      itemCount: monthly.length,
-                      padding: const EdgeInsets.all(8.0),
-                      itemBuilder: (context, index) {
-                        final rate = monthly[index];
-                        return Card(
-                          color: Colors.red,
-                          margin: EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            leading: Icon(Icons.access_time, color: Colors.white),
-                            title: Text(
-                              "${rate['duration']}",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
+                      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Text(
-                                  "RM ",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                SizedBox(width: 2),
-                                SizedBox(
-                                  width: 60,
-                                  child: Text(
-                                    monthly[index]['price'].toStringAsFixed(2),
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.white),
-                                  onPressed: () async{
-                                    _showEditDialog(context, index);
-                                  },
-                                ),
+                                Icon(Icons.person, color: Colors.red, size: 20),
+                                SizedBox(width: 5),
+                                Text(username, style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
                               ],
                             ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            ElevatedButton(
-              onPressed: saveChanges,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                fixedSize: Size(100, 45),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ) // Background color
-              ),
-              child: Text(
-                "Save",
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ),
+                            SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Icon(Icons.email, color: Colors.red, size: 20),
+                                SizedBox(width: 5),
+                                Text(email, style: TextStyle(fontSize: 14, color: Colors.black)),
+                              ],
+                            ),
+                            SizedBox(height: 3),
+                            Row(
+                              children: [
+                                Icon(Icons.phone, color: Colors.red, size: 20),
+                                SizedBox(width: 5),
+                                Text(phonenum, style: TextStyle(fontSize: 14, color: Colors.black)),
+                              ],
+                            ),
+                            SizedBox(height: 3),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                ),
+              )
+            )
           ],
         ),
       ),
     );
   }
+
 }
