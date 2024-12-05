@@ -1,3 +1,4 @@
+import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -35,8 +36,12 @@ class _AddParkingPageState extends State<AddParkingPage> {
     super.initState();
     _fetchVehiclePlates();
     _fetchPricing();
+    AwesomeNotifications().isNotificationAllowed().then((isAllowed){
+      if(!isAllowed){
+        AwesomeNotifications().requestPermissionToSendNotifications();
+      }
+    });
   }
-
 
   Future<void> _fetchVehiclePlates() async {
     try {
@@ -155,6 +160,33 @@ Future<void> _fetchPricing() async {
           _updatePrice();
         }
       });
+    }
+  }
+
+  void scheduleNotification() {
+    final now = DateTime.now();
+    final parkingEndTime = DateTime(
+      endDate.year,
+      endDate.month,
+      endDate.day,
+      endTime.hour,
+      endTime.minute,
+    );
+
+    final notificationTime = parkingEndTime.subtract(Duration(minutes: 3));
+
+    if (notificationTime.isAfter(now)) {
+      AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 10,
+          channelKey: 'basic_channel',
+          title: 'Parking Expiring Soon',
+          body: 'Your parking is expiring in 3 minutes.',
+        ),
+        schedule: NotificationCalendar.fromDate(date: notificationTime),
+      );
+    } else{
+      print('Notification time is in the past or invalid.');
     }
   }
 
@@ -476,13 +508,30 @@ Future<void> _fetchPricing() async {
                     onPressed: () async {
                       try {
 
-                        DateTime startDateTime = DateTime(startDate.year, startDate.month, startDate.day, startTime.hour, startTime.minute);
-                        DateTime endDateTime = DateTime(endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
+                        DateTime startDateTime = DateTime(
+                          startDate.year, startDate.month, startDate.day, startTime.hour, startTime.minute);
+                        DateTime endDateTime = DateTime(
+                          endDate.year, endDate.month, endDate.day, endTime.hour, endTime.minute);
 
-                        // Use the userParkingSelectionID to update the correct document
+                        // Check if there's any ongoing parking session for the same plate number
+                        QuerySnapshot ongoingParkings = await FirebaseFirestore.instance
+                            .collection('history parking')
+                            .where('vehiclePlateNum', isEqualTo: selectedPlate)
+                            .where('endTime', isGreaterThan: DateTime.now().toString())
+                            .get();
+
+                        if (ongoingParkings.docs.isNotEmpty) {
+                          // If there are unexpired parking sessions, show an error message
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('This vehicle already has an active parking session.')),
+                          );
+                          return;
+                        }
+
+                        // Proceed to save the parking details if no conflicts are found
                         DocumentReference parkingSelectionDocRef = FirebaseFirestore.instance
                             .collection('history parking')
-                            .doc(widget.userparkingselectionID);  // Use the passed ID
+                            .doc(widget.userparkingselectionID);
 
                         await parkingSelectionDocRef.update({
                           'vehiclePlateNum': selectedPlate,
@@ -490,7 +539,10 @@ Future<void> _fetchPricing() async {
                           'startTime': startDateTime.toString(),
                           'endTime': endDateTime.toString(),
                         });
+
                         print("Data saved successfully.");
+                        
+                        scheduleNotification();
 
                         Navigator.push(
                           context,
@@ -521,4 +573,11 @@ Future<void> _fetchPricing() async {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    registrationController.dispose();
+    super.dispose();
+  }
 }
+

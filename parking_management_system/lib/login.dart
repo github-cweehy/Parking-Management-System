@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'signup.dart';
 import 'mainpage.dart';
 import 'adminMainPage.dart';
 
 class LoginPage extends StatefulWidget {
+
+  const LoginPage();
+  
   @override
   _LoginPageState createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
@@ -80,6 +80,162 @@ class _LoginPageState extends State<LoginPage> {
       // Show error for any other issues
       _showErrorDialog('Error: ${e.toString()}');
     }
+  }
+
+  void showPasswordChangeDialog(){
+    TextEditingController newPasswordController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context, 
+      builder: (context){
+        return AlertDialog(
+          title: Text('Forgot Password'),
+          content: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value){
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your username';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+
+                TextFormField(
+                  controller: newPasswordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter your new password';
+                    }
+                    if (value.length < 12 || value.length > 15) {
+                      return 'at least 12-15 characters';
+                    }
+                    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#\$&*~]).{12,15}$').hasMatch(value)) {
+                      return 'at least 1 uppercase & lowercase,\n'
+                             '1 number, and 1 special character';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: (){
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState!.validate()) {
+                    String username = _usernameController.text.trim();
+                    String newPassword = newPasswordController.text.trim();
+                  
+                    try {
+                      QuerySnapshot userSnapshot = await _firestore
+                          .collection('users')
+                          .where('username', isEqualTo: username)
+                          .get();
+
+                      if (userSnapshot.docs.isNotEmpty) {
+                        // Update password in Firebase
+                        String userId = userSnapshot.docs[0].id;
+                        await _firestore
+                            .collection('users')
+                            .doc(userId)
+                            .update({'password': newPassword});
+                        Navigator.pop(context);
+                        _showSnackBar('Password updated successfully!');
+                      } else {
+                        _showSnackBar('Username not found!');
+                      }
+                    } catch (e) {
+                      _showSnackBar('Error: ${e.toString()}');
+                    }
+
+                    try {
+                      QuerySnapshot userSnapshot = await _firestore
+                          .collection('admin')
+                          .where('username', isEqualTo: username)
+                          .get();
+
+                      if (userSnapshot.docs.isNotEmpty) {
+                        // Update password in Firebase
+                        String userId = userSnapshot.docs[0].id;
+                        await _firestore
+                            .collection('admin')
+                            .doc(userId)
+                            .update({'password': newPassword});
+                        Navigator.pop(context);
+                        _showSnackBar('Password updated successfully!');
+                      } else {
+                        _showSnackBar('Username not found!');
+                      }
+                    } catch (e) {
+                      _showSnackBar('Error: ${e.toString()}');
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  padding: EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: Text(
+                  'Change',
+                  style: TextStyle(fontSize: 18, color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   void _showErrorDialog(String message) {
@@ -188,7 +344,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 10),
                 TextButton(
                   onPressed: () {
-                    // Handle forgot password
+                    showPasswordChangeDialog();
                   },
                   child: const Text(
                     'Forgot Password?',

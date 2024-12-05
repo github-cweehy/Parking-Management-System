@@ -1,8 +1,23 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'login.dart'; 
+import 'login.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
-Future <void> main() async {
+
+Future<void> main() async {
+  AwesomeNotifications().initialize(
+    null,
+    [
+      NotificationChannel(
+        channelKey: 'basic_channel',
+        channelName: 'Basic Notifications',
+        channelDescription: 'Notification channel for basic tests',
+        importance: NotificationImportance.High,
+        playSound: true,
+      ),
+    ],
+    debug: true,
+  );
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   runApp(MyApp());

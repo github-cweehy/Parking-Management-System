@@ -89,6 +89,11 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   .doc(widget.userparkingselectionID)
                   .delete();
                 
+                await FirebaseFirestore.instance
+                  .collection('packages_bought')
+                  .doc(widget.packageId)
+                  .delete();
+                
                 Navigator.pushReplacement(
                   context, 
                   MaterialPageRoute(
@@ -380,7 +385,8 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
               source:widget.source, 
               userParkingSelectionID: 
               widget.userparkingselectionID, 
-              userId: widget.userId
+              userId: widget.userId,
+              packageId: widget.packageId,
             ),
           ],
         ),
@@ -417,6 +423,14 @@ class CancelButton extends StatelessWidget {
               
               if (documentId == null) {
                 throw "Document ID is null for the selected source.";
+              }
+
+              if (packageId != null) {
+                await FirebaseFirestore.instance
+                    .collection('packages_bought')
+                    .doc(packageId)
+                    .delete();
+                print("Packages bought document deleted.");
               }
 
               await FirebaseFirestore.instance.collection(collection).doc(documentId).delete();

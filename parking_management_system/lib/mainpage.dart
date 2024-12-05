@@ -22,6 +22,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final User? currentUser = FirebaseAuth.instance.currentUser;
+  List<Map<String, dynamic>> userPackages = [];
   bool isFavourite = false;
 
   String username = '';
@@ -31,12 +32,13 @@ class _MainPageState extends State<MainPage> {
   @override
   void initState() {
     super.initState();
-    _fetchUsername();
-    _fetchParkingHistory();
-    _fetchParkingPrices();
+    fetchUsername();
+    fetchParkingHistory();
+    fetchParkingPrices();
+    fetchPackages();
   }
 
-  Future<void> _fetchUsername() async {
+  Future<void> fetchUsername() async {
     try {
       final userDoc = await _firestore.collection('users').doc(widget.userId).get();
       setState(() {
@@ -47,7 +49,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  Future<void> _fetchParkingHistory() async {
+  Future<void> fetchParkingHistory() async {
     try {
       final querySnapshot = await _firestore
           .collection('history parking')
@@ -58,6 +60,27 @@ class _MainPageState extends State<MainPage> {
 
       for (var doc in querySnapshot.docs) {
         final parkingData = doc.data() as Map<String, dynamic>;
+
+        // Parse and validate endTime
+        dynamic endTime = parkingData['endTime'];
+        if (endTime is String) {
+          // Parse string to DateTime
+          try {
+            endTime = Timestamp.fromDate(DateTime.parse(endTime));
+          } catch (e) {
+            print("Error parsing endTime for document ${doc.id}: $e");
+            continue; // Skip this document
+          }
+        }
+
+        Timestamp? endTimestamp = endTime is Timestamp ? endTime : null;
+
+        // Filter out expired entries
+        if (endTimestamp == null || endTimestamp.toDate().isBefore(DateTime.now())) {
+          print("Skipping expired parking ID: ${doc.id}");
+          continue; // Skip expired parking
+        }
+
         final favDoc = await _firestore.collection('favourite').doc(doc.id).get();
 
         fetchedHistory.add({
@@ -75,7 +98,7 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  Future<void> _fetchParkingPrices() async {
+  Future<void> fetchParkingPrices() async {
     try {
       final pricingDoc = await _firestore.collection('parkingselection').doc('pricing').get();
       if (pricingDoc.exists) {
@@ -227,6 +250,99 @@ class _MainPageState extends State<MainPage> {
     );
   }
 
+  Future<void> fetchPackages() async {
+    try {
+      final querySnapshot = await _firestore
+        .collection('packages_bought')
+        .where('userId', isEqualTo: widget.userId)
+        .get();
+      
+      final List<Map<String, dynamic>> fetchedPackages = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'duration': data['duration'] ?? 'Unknown Package',
+          'endDate': (data['endDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+          'vehiclePlate': data['vehiclePlate'] ?? 'Unknown Vehicle',
+        };
+      }).toList();
+
+      setState(() {
+        userPackages = fetchedPackages;
+      });
+    } catch (e) {
+      print("Error fetching user packages: $e");
+    }
+  }
+
+  Widget _buildPackageCard(Map<String, dynamic> packageData) {
+    String duration = packageData['duration'] ?? 'Unknown Package';
+    String vehicle = packageData['vehiclePlate'] ?? 'Unknown VehiclePlate';
+    String endDate = packageData['endDate'] != null
+        ? DateFormat('yyyy-MM-dd').format(packageData['endDate'])
+        : 'Unknown Date';
+        
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 5,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                "Package: $duration",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.calendar_month, color: Colors.white),
+              SizedBox(width: 10),
+              Text(
+                "End Date: $endDate",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.time_to_leave, color: Colors.white),
+              SizedBox(width: 10),
+              Text(
+                "Vehicle: $vehicle",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildParkingHistoryCard(Map<String, dynamic> parkingData) {
     bool isFavourite = parkingData['isFavourite'] ?? false;
     String parkingId = parkingData['id'];
@@ -299,7 +415,7 @@ class _MainPageState extends State<MainPage> {
               Icon(Icons.access_time, color: Colors.red),
               SizedBox(width: 10),
               Text(
-                '${parkingData['startTime'] ?? ''}\n${parkingData['endTime'] ?? ''}',
+                "${parkingData['startTime']}\n${parkingData['endTime']}",
                 style: TextStyle(fontSize: 16),
               ),
               Spacer(),
@@ -478,59 +594,103 @@ class _MainPageState extends State<MainPage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Your Parking',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your Parking',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            SizedBox(height: 20),
-            parkingHistory.isEmpty
-                ? Center(child: Text(''))
+              parkingHistory.isEmpty
+                  ? Center(child: Text(''))
+                  : ListView.builder(
+                      shrinkWrap: true,  
+                      itemCount: parkingHistory.length,
+                      itemBuilder: (context, index) {
+                        return _buildParkingHistoryCard(parkingHistory[index]);
+                      },
+                    ),
+              GestureDetector(
+                onTap: () => _showPricingDialog(context),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.directions_car, color: Colors.white, size: 50),
+                      SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add, color: Colors.white, size: 20),
+                          SizedBox(width: 10),
+                          Text(
+                            'Add New Parking',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 60),
+
+              Text(
+                'Your Active Packages',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 20),
+              userPackages.isEmpty
+                ? Center(child: Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    margin: EdgeInsets.symmetric(vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.not_interested_rounded, color: Colors.white),
+                          SizedBox(width: 10),
+                          Text(
+                            'No packages bought.',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              ),
+                            ),
+                        ],
+                      ),
+                    )))
                 : ListView.builder(
-                    shrinkWrap: true,  // Ensures the ListView only takes as much space as it needs
-                    itemCount: parkingHistory.length,
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: userPackages.length,
                     itemBuilder: (context, index) {
-                      return _buildParkingHistoryCard(parkingHistory[index]);
+                      return _buildPackageCard(userPackages[index]);
                     },
                   ),
-            GestureDetector(
-              onTap: () => _showPricingDialog(context),
-              child: Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.red,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.directions_car, color: Colors.white, size: 50),
-                    SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.add, color: Colors.white, size: 20),
-                        SizedBox(width: 10),
-                        Text(
-                          'Add New Parking',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
