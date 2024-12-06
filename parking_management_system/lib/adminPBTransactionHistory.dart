@@ -1,30 +1,31 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
-import 'adminPBTransactionHistory.dart';
+import 'adminPBHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
 import 'adminProfile.dart';
 import 'login.dart';
 
-class PackagesBoughtHistoryPage extends StatefulWidget {
-  final String adminId;
+class PackagesBoughtTransactionHistoryPage extends StatefulWidget {
+    final String adminId;
 
-  PackagesBoughtHistoryPage({required this.adminId});
+    PackagesBoughtTransactionHistoryPage({required this.adminId});
 
-  @override
-  _PackagesBoughtHistoryPage createState() => _PackagesBoughtHistoryPage();
+    @override
+    _PackagesBoughtTransactionHistoryPage createState() => _PackagesBoughtTransactionHistoryPage();
 }
 
-class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
+class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransactionHistoryPage>{
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  String admin_username = '';
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
-  String admin_username = '';
 
   Timestamp? startTimestamp;
   Timestamp? endTimestamp;
@@ -37,9 +38,12 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
 
     try{
       DocumentSnapshot userSnapshot = await _firestore.collection('users').doc(userId).get();
-      if(userSnapshot.exists && userSnapshot.data() != null){
+      if(userSnapshot.exists){
         String username = userSnapshot['username'] ?? 'Unknown User';
-        _usernameCache[userId] = username;
+        setState(() {
+          _usernameCache[userId] = username;
+        });
+        
         return username;
       }
       else{
@@ -52,7 +56,7 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
   }
 
   @override
-  void initState() {
+  void initState(){
     super.initState();
     _fetchAdminUsername();
     _fetchAllUsernames();
@@ -92,12 +96,12 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
   Stream<QuerySnapshot> getFilteredData() {
     if (startTimestamp != null && endTimestamp != null) {
       return _firestore
-          .collection('packages_bought')
-          .where('startDate', isGreaterThanOrEqualTo: startTimestamp)
-          .where('startDate', isLessThanOrEqualTo: endTimestamp)
+          .collection('transactions')
+          .where('timestamp', isGreaterThanOrEqualTo: startTimestamp)
+          .where('timestamp', isLessThanOrEqualTo: endTimestamp)
           .snapshots();
     } else {
-      return _firestore.collection('packages_bought').snapshots();
+      return _firestore.collection('transactions').snapshots();
     }
   }
 
@@ -140,10 +144,10 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
 
   Future<List<DateTime>> getAvailableDates() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('packages_bought').get();
+      QuerySnapshot snapshot = await _firestore.collection('transactions').get();
 
       List<DateTime> availableDates = snapshot.docs.map((doc) {
-        Timestamp timestamp = doc['startDate'];
+        Timestamp timestamp = doc['timestamp'];
         return DateTime(timestamp.toDate().year, timestamp.toDate().month, timestamp.toDate().day);
       }).toList();
 
@@ -164,11 +168,11 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
     });
   }
 
-  void _logout(BuildContext context) async {
+  void _logout(BuildContext context) async{
     try {
       // Sign out from Firebase Authentication
       await FirebaseAuth.instance.signOut();
-
+      
       // Navigate to LoginPage and replace the current page
       Navigator.pushReplacement(
         context,
@@ -181,7 +185,7 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
         SnackBar(content: Text('Error signing out. Please try again.')),
       );
     }
-  }
+  } 
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +210,7 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<String>(
-              underline: SizedBox(),
+              underline: Container(),
               icon: Row(
                 children: [
                   Text(admin_username, style: TextStyle(color: Colors.black)),
@@ -390,9 +394,9 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
                   },
                 ),
                 Text(
-                  "Packages Bought History",
+                  "Packages Bought Transaction History",
                   style: TextStyle(
-                    fontSize: 20, 
+                    fontSize: 18, 
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -408,7 +412,8 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
                   children: [
                     Padding(
                       padding: EdgeInsets.only(left: 10.0),
-                      child: Text("Start Date", style: TextStyle(fontSize: 13)),
+                      child: Text(
+                        "Start Date", style: TextStyle(fontSize: 13)),
                     ),
                     GestureDetector(
                       onTap: () => _selectDate(context, true),
@@ -448,6 +453,7 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
                       padding: EdgeInsets.only(left: 10.0),
                       child: Text("End Date", style: TextStyle(fontSize: 13)),
                     ),
+
                     GestureDetector(
                       onTap: () => _selectDate(context, false),
                       child: Container(
@@ -486,7 +492,7 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.grey.shade200,
                       border: Border.all(
                         color: Colors.grey.shade400,
                         width: 1.0,
@@ -510,75 +516,140 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
                           ));
                         }
 
-                        var packages = snapshot.data!.docs;
+                        var transactions = snapshot.data!.docs;
 
                         return ListView.builder(
-                          itemCount: packages.length,
+                          padding: const EdgeInsets.all(8.0),
+                          itemCount: transactions.length,
                           itemBuilder: (context, index) {
-                            var package = packages[index];
-                            var userId = package['userId']; 
+                            var transaction = transactions[index];
+                            var userId = transaction['userId']; 
                             var username = _usernameCache[userId] ?? 'Unknown User';
-                            var duration = package['duration'] ?? 'Unknown';
-                            var price = package['price'] ?? 0.0;
+                            var transactionId = transaction.id;
+                            var package = transaction['packages']; //transactions packages
+                            Timestamp timestamp = transaction['timestamp'];
+                            var packageId = transaction['packages']; //history package
+                            var payment = transaction['paymentMethod'];
+                            final price = transaction['amount'].toStringAsFixed(2) ?? 0.0;
 
-                            return Card(
-                              color: Colors.red,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: BorderSide(color: Colors.red, width: 1),
-                              ),
-                              margin: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                              child: Padding(
-                                padding: EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: FutureBuilder<String>(
-                                        future: _fetchUsername(userId),
-                                        builder: (context, snapshot){
-                                          if(snapshot.connectionState == ConnectionState.waiting){
-                                            return Text(
-                                              'Loading',
-                                              style: TextStyle(fontSize: 15, color: Colors.white),
-                                            );
-                                          }
-                                          if(snapshot.hasError || !snapshot.hasData){
-                                            return Text(
-                                              'Unknown User',
-                                              style: TextStyle(fontSize: 15, color: Colors.white),
-                                            );
-                                          }
-                                          return Text(
-                                            snapshot.data!,
-                                            style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end,
-                                        children: [
-                                          Text(
-                                            'Packages: $duration',
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              color: Colors.white,
+                            //Format dates and times
+                            DateTime dateTime = timestamp.toDate().toLocal();
+                            //Adjust time to the UTC+8 time zone
+                            dateTime = dateTime.add(Duration(hours: 8)); 
+                            String formatdateTime = DateFormat('d MMM yyyy  h:mm a').format(dateTime);
+
+                            //Determine if packages is null
+                            if(package == null){
+                              return SizedBox.shrink();
+                            }
+
+                            return FutureBuilder<DocumentSnapshot>(
+                              future: _firestore.collection('packages_bought').doc(packageId).get(),
+                              builder: (context, packageSnapshot){
+                                if(packageSnapshot.connectionState == ConnectionState.waiting) {
+                                  return CircularProgressIndicator();
+                                }
+                                if (packageSnapshot.hasError) {
+                                  return Text('Error fetching parking details');
+                                }
+                                if (!packageSnapshot.hasData || !packageSnapshot.data!.exists) {
+                                  return SizedBox.shrink(); 
+                                }
+
+                                //Get startTime endTime from packages_bought
+                                var packageData = packageSnapshot.data!;
+                                Timestamp startTimestamp = packageData['startDate'];
+                                Timestamp endTimestamp = packageData['endDate']; 
+
+                                //String convert to DateTime &(packages_bought)duration (transactions packagesId)
+                                DateTime startDate = startTimestamp.toDate();
+                                DateTime endDate = endTimestamp.toDate();
+                                String duration = packageData['duration'] ?? 'Not available';
+                                String PlateNum = packageData['vehiclePlate'] ??'Not available';
+
+                                //format datetime
+                                String formatStartTime = DateFormat('d MMM yyyy h:mm a').format(startDate);
+                                String formatEndTime = DateFormat('d MMM yyyy h:mm a').format(endDate);
+
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: Colors.grey.shade400, width: 1.0),
+                                  ),
+                                  margin: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              '@$username',
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.red,
+                                              ),
                                             ),
-                                          ),
-                                          Text(
-                                            'RM ${price.toStringAsFixed(2)}',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.white,
+                                            Text(
+                                              transactionId,
+                                              style: TextStyle(fontSize: 12, color: Colors.red),
                                             ),
-                                          ),
-                                        ],
-                                      ),
+                                          ],
+                                        ),
+                                        SizedBox(height: 8),
+
+                                        Row(
+                                          children: [
+                                            Icon(Icons.calendar_month_outlined, color: Colors.grey, size: 16),
+                                            SizedBox(width: 3),
+                                            Text(formatStartTime, style: TextStyle(fontSize: 13, color: Colors.black)),
+                                          ]
+                                        ),
+                                        SizedBox(height: 3),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.calendar_month_outlined, color: Colors.grey, size: 16),
+                                            SizedBox(width: 3),
+                                            Text(formatEndTime, style: TextStyle(fontSize: 13, color: Colors.black)),
+                                          ]
+                                        ),
+                                        SizedBox(height: 3),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.work_history_outlined, color: Colors.grey, size: 16),
+                                            SizedBox(width: 3),
+                                            Text(duration, style: TextStyle(fontSize: 13, color: Colors.black)),
+                                          ],
+                                        ),
+                                        SizedBox(height: 3),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.payment_outlined, color: Colors.grey, size: 16),
+                                            SizedBox(width: 3),
+                                            Text(payment, style: TextStyle(fontSize: 13, color: Colors.black)),
+                                          ],
+                                        ),
+                                        SizedBox(height: 3),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.directions_car, color: Colors.grey, size: 16),
+                                            SizedBox(width: 3),
+                                            Text(PlateNum, style: TextStyle(fontSize: 13, color: Colors.black)),
+                                            Spacer(),
+
+                                            Text('RM $price', style: TextStyle(fontSize: 16, color: Colors.green)),
+                                          ],
+                                        ),
+                                        SizedBox(height: 3),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              ),
+                                  ),
+                                );
+                              },
                             );
                           },
                         );
@@ -601,4 +672,5 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
     ];
     return monthNames[month - 1];
   }
+
 }
