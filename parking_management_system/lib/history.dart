@@ -6,6 +6,7 @@ import 'packages.dart';
 import 'packageshistory.dart';
 import 'parkingreceipt.dart';
 import 'mainpage.dart';
+import 'rewards.dart';
 import 'userprofile.dart';
 import 'login.dart';
 
@@ -205,6 +206,18 @@ class _HistoryPageState extends State<HistoryPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => PackagesHistoryPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.red),
+              title: Text('Your Rewards', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
                   ),
                 );
               },

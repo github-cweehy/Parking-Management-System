@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:parking_management_system/packageshistory.dart';
+import 'packageshistory.dart';
 import 'history.dart';
 import 'mainpage.dart';
 import 'packages.dart';
 import 'userprofile.dart';
 import 'login.dart';
 import 'addparking.dart';
-import 'packageshistory.dart';
+import 'rewards.dart';
 
 class FavouritePage extends StatefulWidget {
   final String userId;
@@ -216,6 +216,18 @@ class _FavouritePageState extends State<FavouritePage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => PackagesHistoryPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.red),
+              title: Text('Your Rewards', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
                   ),
                 );
               },

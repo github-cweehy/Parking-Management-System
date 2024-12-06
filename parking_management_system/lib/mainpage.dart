@@ -9,6 +9,7 @@ import 'packageshistory.dart';
 import 'userprofile.dart';
 import 'login.dart';
 import 'location.dart';
+import 'rewards.dart';
 
 class MainPage extends StatefulWidget {
   final String userId;
@@ -348,16 +349,36 @@ class _MainPageState extends State<MainPage> {
     String parkingId = parkingData['id'];
 
     //Retrieve start and end dates as Timestamps from the Firestore document
-    Timestamp? startDateTimestamp = parkingData['startDate'];
-    Timestamp? endDateTimestamp = parkingData['endDate'];
+    dynamic startTimeData = parkingData['startTime'];
+    dynamic endTimeData = parkingData['endTime'];
 
-    //Format the Timestamps into readable data strings
-    String startDate = startDateTimestamp != null
-        ? DateFormat('yyyy-MM-dd').format(startDateTimestamp.toDate())
-        : 'Unknown Start Date';
-    String endDate = endDateTimestamp != null
-        ? DateFormat('yyyy-MM-dd').format(endDateTimestamp.toDate())
-        : 'Unknown End Date';
+    //Format the start and end times
+    String startDate = '';
+    String endDate = '';
+
+    if (startTimeData is Timestamp) {
+      startDate = DateFormat('yyyy-MM-dd HH:mm').format(startTimeData.toDate());
+    } else if (startTimeData is String) {
+      try {
+        startDate = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(startTimeData));
+      } catch (e) {
+        startDate = 'Invalid Start Date';
+      }
+    } else {
+      startDate = 'Unknown Start Date';
+    }
+
+    if (endTimeData is Timestamp) {
+      endDate = DateFormat('yyyy-MM-dd HH:mm').format(endTimeData.toDate());
+    } else if (endTimeData is String) {
+      try {
+        endDate = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.parse(endTimeData));
+      } catch (e) {
+        endDate = 'Invalid End Date';
+      }
+    } else {
+      endDate = 'Unknown End Date';
+    }
 
     return Container(
       margin: EdgeInsets.symmetric(vertical: 8),
@@ -415,7 +436,7 @@ class _MainPageState extends State<MainPage> {
               Icon(Icons.access_time, color: Colors.red),
               SizedBox(width: 10),
               Text(
-                "${parkingData['startTime']}\n${parkingData['endTime']}",
+                "Start : $startDate\nEnd   : $endDate", 
                 style: TextStyle(fontSize: 16),
               ),
               Spacer(),
@@ -585,6 +606,18 @@ class _MainPageState extends State<MainPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => PackagesHistoryPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.red),
+              title: Text('Your Rewards', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
                   ),
                 );
               },

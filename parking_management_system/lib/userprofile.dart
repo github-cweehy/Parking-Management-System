@@ -9,6 +9,7 @@ import 'history.dart';
 import 'mainpage.dart';
 import 'packages.dart';
 import 'packageshistory.dart';
+import 'rewards.dart';
 
 class UserProfilePage extends StatefulWidget {
   final String userId;
@@ -384,23 +385,6 @@ void _setDefaultVehicle(String registrationNumber) async {
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchValidPackages() async {
-  try {
-    final now = Timestamp.now();
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('packages_bought')
-        .where('userId', isEqualTo: widget.userId)
-        .where('startDate', isLessThanOrEqualTo: now)
-        .where('endDate', isGreaterThanOrEqualTo: now)
-        .get();
-
-    return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
-  } catch (e) {
-    print('Error fetching packages: $e');
-    return [];
-  }
-}
-
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -511,6 +495,18 @@ void _setDefaultVehicle(String registrationNumber) async {
                   );
                 },
               ),
+              ListTile(
+                leading: Icon(Icons.celebration_rounded, color: Colors.red),
+                title: Text('Your Rewards', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -577,36 +573,6 @@ void _setDefaultVehicle(String registrationNumber) async {
                           _edit('phone_number', userData?['phone_numebr'] ?? '');
                         }),                        
                         const SizedBox(height: 20),
-
-                        //Packages
-                        FutureBuilder<List<Map<String, dynamic>>>(
-                          future: fetchValidPackages(),
-                          builder: (context, snapshot){
-                              if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Center(child: CircularProgressIndicator());
-                              }
-                              if (snapshot.hasError) {
-                                return Center(child: Text("Error loading packages."));
-                              }
-                              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                                return Center(child: Text("No valid packages found."));
-                              }
-
-                              final packages = snapshot.data!;
-                              return ListView.builder(
-                                itemCount: packages.length,
-                                itemBuilder: (context, index) {
-                                  final package = packages[index];
-                                  return ListTile(
-                                    title: Text(package['duration'] ?? ''),
-                                    subtitle: Text(
-                                      "Valid from ${package['startDate'].toDate()} to ${package['endDate'].toDate()}",
-                                    ),
-                                  );
-                                },
-                              ); 
-                            },
-                          ),
 
                         // Return Button
                         _buildActionButton('Return', () {

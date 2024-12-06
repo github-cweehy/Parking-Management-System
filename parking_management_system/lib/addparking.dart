@@ -2,8 +2,6 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'favourite.dart';
-import 'history.dart';
 import 'mainpage.dart';
 import 'paymentmethod.dart';
 
@@ -163,6 +161,73 @@ Future<void> _fetchPricing() async {
     }
   }
 
+  Future<void> updateUserPurchaseCount() async {
+    try {
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(widget.userId);
+      DocumentSnapshot userDoc = await userDocRef.get();
+
+      Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
+
+      int purchaseCount = userData?['purchaseCount'] ?? 0;
+      purchaseCount++;
+
+      // Update the purchase count in Firestore
+      await userDocRef.update({'purchaseCount': purchaseCount});
+
+      // Check if the user is eligible for a reward
+      if (purchaseCount % 10 == 0) {
+        // Grant a free daily parking reward
+        await _generateReward();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Congratulations! You have earned a free daily parking!')),
+        );
+      }
+    } catch (e) {
+      print("Error updating purchase count: $e");
+    }
+}
+
+  Future<void> _generateReward() async {
+    try {
+      DocumentReference userDocRef = FirebaseFirestore.instance.collection('users').doc(widget.userId);
+      
+      DocumentReference rewardDocRef = FirebaseFirestore.instance.collection('rewards').doc();
+
+      Map<String, dynamic> RewardData = {
+        'userId': widget.userId,
+        'rewardCode': rewardDocRef.id, 
+        'isUsed': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'expiryDate': DateTime.now().add(Duration(days: 30)),
+      };
+
+      await rewardDocRef.set(RewardData);
+
+      await userDocRef.update({
+        'Free parking': FieldValue.arrayUnion([rewardDocRef.id]), 
+      });
+
+    } catch (e) {
+      print("Error generating reward: $e");
+    }
+  }
+
+  Future<bool> _hasActivePackage(String vehiclePlateNum) async {
+    try {
+      DateTime now = DateTime.now();
+      QuerySnapshot activePackages = await FirebaseFirestore.instance
+          .collection('packages bought')
+          .where('vehiclePlateNum', isEqualTo: vehiclePlateNum)
+          .where('endDate', isGreaterThan: now) 
+          .get();
+
+      return activePackages.docs.isNotEmpty; 
+    } catch (e) {
+      print("Error checking active packages: $e");
+      return false; 
+    }
+  }
+
   void scheduleNotification() {
     final now = DateTime.now();
     final parkingEndTime = DateTime(
@@ -224,79 +289,6 @@ Future<void> _fetchPricing() async {
           height: 60,
         ),
         centerTitle: true,
-      ),
-      
-      // Navigation Side Bar
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.red,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/logomelaka.jpg',
-                    height: 60,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Melaka Parking',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            ListTile(
-              leading: Icon(Icons.home, color: Colors.red),
-              title: Text('Home Page', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MainPage(
-                      userId: widget.userId,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.red),
-              title: Text('History', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => HistoryPage(
-                      userId: widget.userId,
-                    ),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.favorite, color: Colors.red),
-              title: Text('Favourite', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FavouritePage(
-                      userId: widget.userId,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
       ),
 
       body: SingleChildScrollView(
@@ -507,6 +499,13 @@ Future<void> _fetchPricing() async {
                     ),
                     onPressed: () async {
                       try {
+                        bool hasActivePackage = await _hasActivePackage(selectedPlate);
+                        if (hasActivePackage) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('This vehicle has an active package. Cannot add parking.')),
+                          );
+                          return; 
+                        }
 
                         DateTime startDateTime = DateTime(
                           startDate.year, startDate.month, startDate.day, startTime.hour, startTime.minute);
@@ -541,6 +540,8 @@ Future<void> _fetchPricing() async {
                         });
 
                         print("Data saved successfully.");
+
+                        await updateUserPurchaseCount();
                         
                         scheduleNotification();
 
@@ -580,4 +581,6 @@ Future<void> _fetchPricing() async {
     super.dispose();
   }
 }
+
+
 
