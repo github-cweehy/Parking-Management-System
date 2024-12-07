@@ -22,7 +22,7 @@ class PackagesPage extends StatefulWidget {
 class _PackagesPageState extends State<PackagesPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String username = '';
-  Map<String, dynamic> prices = {};
+  List<Map<String, dynamic>> packages = [];
 
   @override
   void initState() {
@@ -44,31 +44,38 @@ class _PackagesPageState extends State<PackagesPage> {
   
   Future<void> _fetchPackagePrices() async {
     try {
-      // List of documents to fetch
-      List<String> durations = ['1-month', '3-month', '6-month'];
+      final packageCollection = await _firestore.collection('packagesprice').get();
       
-      // Temporary map to hold the prices
-      Map<String, dynamic> tempPrices = {};
+      List<Map<String, dynamic>> tempPackages = [];
 
-      // Loop through each duration and fetch the price field
-      for (String duration in durations) {
-        final packageDoc = await _firestore.collection('packagesprice').doc(duration).get();
-        
-        if (packageDoc.exists) {
-          double price = (packageDoc.data()?['price'] ?? 0.0).toDouble();
-          tempPrices[duration] = price;
-        } else {
-          print("Document $duration does not exist.");
-        }
+      // Loop through each document and add to the list
+      for (var doc in packageCollection.docs) {
+        tempPackages.add({
+          'duration': doc.id, 
+          'price': (doc.data()['price'] ?? 0.0).toDouble(),
+        });
       }
 
-      // Update state with fetched prices
+      // Sort packages by duration
+      tempPackages.sort((a, b) {
+        return _compareDurations(a['duration'], b['duration']);
+      });
+
       setState(() {
-        prices = tempPrices;
+        packages = tempPackages;
       });
     } catch (e) {
       print("Error fetching package prices: $e");
     }
+  }
+
+  int _compareDurations(String durationA, String durationB) {
+    // Extract the numeric part from the duration string
+    int numA = int.parse(durationA.split('-')[0]);
+    int numB = int.parse(durationB.split('-')[0]);
+
+    // Compare the numeric values
+    return numA.compareTo(numB);
   }
 
   void _logout(BuildContext context) async {
@@ -273,9 +280,9 @@ class _PackagesPageState extends State<PackagesPage> {
               ),
             ),
             const SizedBox(height: 30),
-            ...prices.entries.map((MapEntry<String, dynamic> entry) {
+            ...packages.map((package) {
               return GestureDetector(
-                onTap: () => _navigateToConfirmPackage(entry.key, entry.value),
+                onTap: () => _navigateToConfirmPackage(package['duration'], package['price']),
                 child: Container(
                   margin: EdgeInsets.symmetric(vertical: 10),
                   padding: EdgeInsets.all(15),
@@ -287,11 +294,12 @@ class _PackagesPageState extends State<PackagesPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${entry.key}                                ',
+                        '${package['duration']}',
                         style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
+                      SizedBox(width: 150),
                       Text(
-                        'RM ${entry.value.toString()}',
+                        'RM ${package['price'].toString()}',
                         style: TextStyle(color: Colors.white, fontSize: 18),
                       ),
                       Icon(Icons.arrow_forward_ios, color: Colors.white),

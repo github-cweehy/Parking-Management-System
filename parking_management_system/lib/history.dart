@@ -23,11 +23,20 @@ class _HistoryPageState extends State<HistoryPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String username = '';
+  String searchQuery = '';
+  List<Map<String, dynamic>> allHistory = [];
+  List<Map<String, dynamic>> filteredHistory = [];
 
   @override
   void initState() {
     super.initState();
     _fetchUsername();
+    _fetchUserHistory().then((history) {
+      setState(() {
+        allHistory = history;
+        filteredHistory = allHistory; 
+      });
+    });
   }
 
   Future<void> _fetchUsername() async {
@@ -43,12 +52,28 @@ class _HistoryPageState extends State<HistoryPage> {
 
   // Fetch history records from `history parking` collection where `userId` field matches
   Future<List<Map<String, dynamic>>> _fetchUserHistory() async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('history parking')
-        .where('userID', isEqualTo: widget.userId)
-        .get();
+    try {
+      final querySnapshot = await _firestore
+          .collection('history parking')
+          .where('userID', isEqualTo: widget.userId)
+          .get();
 
-    return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      // Return the list of history records
+      return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+    } catch (e) {
+      print("Error fetching user history: $e");
+      return []; // Return an empty list in case of error
+    }
+  }
+
+  void _searchHistory(String query) {
+    setState(() {
+      searchQuery = query;
+      filteredHistory = allHistory.where((history) {
+        final vehiclePlateNum = history['vehiclePlateNum']?.toLowerCase() ?? '';
+        return vehiclePlateNum.contains(query.toLowerCase());
+      }).toList();
+    });
   }
 
   void _logout(BuildContext context) async {
@@ -225,160 +250,177 @@ class _HistoryPageState extends State<HistoryPage> {
           ],
         ),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _fetchUserHistory(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Card(
-                margin: EdgeInsets.all(20),
-                color: Colors.red,
-                child: Padding(
-                  padding: const EdgeInsets.all(30.0),
-                  child: Text(
-                    'No history available.',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+      body: 
+      Column(
+        children: [
+          SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              onChanged: _searchHistory,
+              decoration: InputDecoration(
+                labelText: 'Search by Vehicle Plate Number',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
               ),
-            );
-          }
-
-          final historyDocs = snapshot.data!;
-
-          return ListView.builder(
-            itemCount: historyDocs.length,
-            itemBuilder: (context, index) {
-              var data = historyDocs[index];
-              return Card(
-                margin: EdgeInsets.all(10),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Icon(Icons.location_on, color: Colors.red),
-                          Text(
-                            data['location'] ?? 'Unknown location',
-                            style: TextStyle(
-                              fontSize: 18, 
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green),
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.green[400],
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              data['pricingOption'],
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchUserHistory(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Card(
+                      margin: EdgeInsets.all(20),
+                      color: Colors.red,
+                      child: Padding(
+                        padding: const EdgeInsets.all(30.0),
+                        child: Text(
+                          'No history available.',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      SizedBox(height: 10),
+                    ),
+                  );
+                }
 
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.access_time, color: Colors.red),
-                              SizedBox(width: 10),
-                              Column(
-                                children: [
-                                  Text(
-                                    "Start: ${data['startTime']}",
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-                                  ),
-                                  Text(
-                                    "End  : ${data['endTime']}",
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-                                  )
-                                ],
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[800],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              data['vehiclePlateNum'] ?? 'Unknown vehiclePlateNum',
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Icon(Icons.price_change, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text(
-                            "RM ${data['price'] ?? 'Unknown price'}",
-                            style: TextStyle(fontSize: 16, color: Colors.black),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 25),
-                      Center(
-                        child: 
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ParkingReceiptPage(
-                                  district: data['location'] ?? 'Unknown location',
-                                  startTime: data['startTime'] ?? 'N/A',
-                                  endTime: data['endTime'] ?? 'N/A',
-                                  amount: data['price'] ?? 0,
-                                  type: data['type'] ?? 'N/A',
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                              child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                final historyDocs = snapshot.data!;
+
+                return ListView.builder(
+                  itemCount: filteredHistory.length,
+                  itemBuilder: (context, index) {
+                    var data = filteredHistory[index];
+                    return Card(
+                      margin: EdgeInsets.all(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Icon(Icons.save_alt, color: Colors.white),
                                 Text(
-                                  'Receipt',
-                                  style: TextStyle(fontSize: 16, color: Colors.white)
+                                  data['location'] ?? 'Unknown location',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green[400],
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    data['pricingOption'],
+                                    style: TextStyle(color: Colors.white),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
+                            SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.access_time, color: Colors.red),
+                                    SizedBox(width: 10),
+                                    Column(
+                                      children: [
+                                        Text(
+                                          "Start: ${data['startTime']}",
+                                          style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                        ),
+                                        Text(
+                                          "End  : ${data['endTime']}",
+                                          style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                        )
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[800],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    data['vehiclePlateNum'] ?? 'Unknown vehiclePlateNum',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Icon(Icons.price_change, color: Colors.red),
+                                SizedBox(width: 10),
+                                Text(
+                                  "RM ${data['price'] ?? 'Unknown price'}",
+                                  style: TextStyle(fontSize: 16, color: Colors.black),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 25),
+                            Center(
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ParkingReceiptPage(
+                                        district: data['location'] ?? 'Unknown location',
+                                        startTime: data['startTime'] ?? 'N/A',
+                                        endTime: data['endTime'] ?? 'N/A',
+                                        amount: double.tryParse(data['price'] ?? '0') ?? 0,
+                                        type: data['type'] ?? 'N/A',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.save_alt, color: Colors.white),
+                                      Text(
+                                        'Receipt',
+                                        style: TextStyle(fontSize: 16, color: Colors.white),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
