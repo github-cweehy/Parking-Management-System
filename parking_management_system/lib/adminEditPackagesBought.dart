@@ -26,6 +26,8 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
 
   List<Map<String, dynamic>> monthly = [];
 
+  bool isLoading = true;
+
   @override
   void initState() {
     super.initState();
@@ -49,47 +51,143 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
 
   // Fetch rates data from Firebase
   void _fetchRatesFromFirebase() async {
+    setState(() {
+      isLoading = true;
+    });
     try {
       List<Map<String, dynamic>> rates = [];
       QuerySnapshot querySnapshot = await _firestore.collection('packagesprice').get();
 
-      for (String duration in ['1-month', '3-month', '6-month']) {
-        DocumentSnapshot snapshot = await _firestore.collection('packagesprice').doc(duration).get();
-        if (snapshot.exists) {
+      for (var doc in querySnapshot.docs) {
+        String duration = doc.id;
           rates.add({
             'duration': duration.replaceAll('-', ' ').split(' ').map((word) => word[0].toUpperCase() + word.substring(1)).join(' '),
-            'price': snapshot['price'].toDouble(),
-            'docId': duration, 
+            'price': doc['price'].toDouble(),
+            'docId': doc.id,
           });
-        }
       }
+      //follow numeric Value to arrange
+       rates.sort((a, b) {
+        int extractNumericValue(String duration) {
+          final numericValue = RegExp(r'\d+').stringMatch(duration);
+          return numericValue != null ? int.parse(numericValue) : 0;
+        }
+
+        return extractNumericValue(a['duration']).compareTo(extractNumericValue(b['duration']));
+      });
+
       setState(() {
         monthly = rates;
       });
     } catch (e) {
       print("Error fetching rates: $e");
     }
+    finally{
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
-  void _logout(BuildContext context) async{
-    try {
-      // Sign out from Firebase Authentication
-      await FirebaseAuth.instance.signOut();
-      
-      // Navigate to LoginPage and replace the current page
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => LoginPage()),
-      );
-    } catch (e) {
-      // Handle any errors that occur during sign-out
-      print("Error signing out: $e");
+  void _showAddPackageDialog(){
+    TextEditingController durationController = TextEditingController();
+    TextEditingController priceController = TextEditingController();
+
+    showDialog(
+      context: context, 
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Add New Packages"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: durationController,
+                decoration: InputDecoration(labelText: "Duration (e.g., 1-month)"),
+              ),
+              TextField(
+                controller: priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: "Price"),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: (){
+                Navigator.of(context).pop();
+              }, 
+              child: Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: (){
+                String duration = durationController.text;
+                double?  price = double.tryParse(priceController.text);
+
+                if(duration.isNotEmpty && price != null) {
+                  setState(() {
+                    monthly.add({
+                      'duration': duration,
+                      'price': price,
+                      'docId': duration.replaceAll(' ', '-').toLowerCase(),
+                    });
+                  });
+                   _addPackageToFirebase(duration, price);
+
+                   Navigator.of(context).pop();
+                }
+                else{
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Please enter valid data.'),
+                  ));
+                }
+              }, child: Text("Add"),
+            ),
+          ],
+        );
+      }
+    );
+  }
+
+  //add packages
+  void _addPackageToFirebase(String duration, double price) async{
+    try{
+      String docId = duration.replaceAll(' ', '-').toLowerCase();
+
+      await _firestore.collection('packagesprice').doc(docId).set({
+        'price': price,
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error signing out. Please try again.')),
+        SnackBar(content: Text('New package added succesfully!')));
+      
+      _fetchRatesFromFirebase();
+    }catch(e){
+      print("Error adding package: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error adding new package. Please try again.')));
+    }
+  }
+
+  //delete packages
+  void _deletePackages(String docId, int index) async{
+    try{
+      await _firestore.collection('packagesprice').doc(docId).delete();
+
+      setState(() {
+        monthly.removeAt(index);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Package deleted successfully!'))
+      );
+    }catch(e){
+      print("Error deleting package: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting package. Please try again!'))
       );
     }
-  }  
-
+  }
 
   // Save changes to Firebase
   void saveChanges() async {
@@ -126,6 +224,41 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
             ),
           ),
           actions: [
+            IconButton(
+              icon: Icon(Icons.delete, color: Colors.red),
+              onPressed: () {
+                showDialog(
+                  context: context, 
+                  builder: (BuildContext context){
+                    return AlertDialog(
+                      title: Text("Comfirm Delete"),
+                      content: Text("Are you sure want to delete this packages?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                          }, 
+                          child: Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          onPressed: (){
+                            _deletePackages(monthly[index]['docId'], index);
+                            
+                            Navigator.of(context).pop();
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Package deleted successfuly!")),
+                            );
+                          }, 
+                          child: Text("Delete", style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    );
+                  }
+                );
+              },
+            ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop(); // Close dialog
@@ -151,6 +284,26 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
       },
     );
   }
+
+  void _logout(BuildContext context) async{
+    try {
+      // Sign out from Firebase Authentication
+      await FirebaseAuth.instance.signOut();
+      
+      // Navigate to LoginPage and replace the current page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    } catch (e) {
+      // Handle any errors that occur during sign-out
+      print("Error signing out: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error signing out. Please try again.')),
+      );
+    }
+  }  
+
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +514,6 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               ],
             ),
             SizedBox(height: 8),
-            
             Expanded(
               child: Stack(
                 children: [
@@ -374,54 +526,70 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                       ),
                       borderRadius: BorderRadius.circular(10), 
                     ),
-                    child: ListView.builder(
-                      itemCount: monthly.length,
-                      padding: const EdgeInsets.all(8.0),
-                      itemBuilder: (context, index) {
-                        final rate = monthly[index];
-                        return Card(
-                          color: Colors.red,
-                          margin: EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            leading: Icon(Icons.access_time, color: Colors.white),
-                            title: Text(
-                              "${rate['duration']}",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  "RM ",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: _firestore.collection('packagesprice').snapshots(), 
+                      builder: (context, snapshot){
+                        if(!snapshot.hasData){
+                          return Center(child: CircularProgressIndicator());
+                        }
+
+                        var packages = snapshot.data!.docs;
+                        List<Widget> packageWidgets = [];
+
+                        for(var package in packages){
+                          var price = package['price'];
+                        }
+
+                        return ListView.builder(
+                          itemCount: monthly.length,
+                          padding: const EdgeInsets.all(8.0),
+                          itemBuilder: (context, index) {
+                            final rate = monthly[index];
+                            return Card(
+                              color: Colors.red,
+                              margin: EdgeInsets.symmetric(vertical: 8),
+                              child: ListTile(
+                                leading: Icon(Icons.access_time, color: Colors.white),
+                                title: Text(
+                                  "${rate['duration']}",
+                                  style: TextStyle(color: Colors.white),
                                 ),
-                                SizedBox(width: 2),
-                                SizedBox(
-                                  width: 60,
-                                  child: Text(
-                                    monthly[index]['price'].toStringAsFixed(2),
-                                    textAlign: TextAlign.right,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      "RM ",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                  ),
+                                    SizedBox(width: 3),
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 1),
+                                      child: Text(
+                                        monthly[index]['price'].toStringAsFixed(2),
+                                        textAlign: TextAlign.right,
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.edit, color: Colors.white),
+                                      onPressed: () async{
+                                        _showEditDialog(context, index);
+                                      },
+                                    ),
+                                  ],
                                 ),
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.white),
-                                  onPressed: () async{
-                                    _showEditDialog(context, index);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
+                              ),
+                            );
+                          },
                         );
-                      },
-                    ),
+                      }
+                    )
                   ),
                 ],
               ),
@@ -434,6 +602,23 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
+            ElevatedButton(
+              onPressed:(){
+                _showAddPackageDialog();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                fixedSize: Size(100, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                'Add',
+                style: TextStyle(color: Colors.white, fontSize: 16)),
+              
+            ),
+
             ElevatedButton(
               onPressed: saveChanges,
               style: ElevatedButton.styleFrom(

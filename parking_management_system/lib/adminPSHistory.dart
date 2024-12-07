@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
 import 'adminPBHistory.dart';
@@ -74,14 +75,11 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   }
 
   Stream<QuerySnapshot> getFilteredData() {
-  if (startDate != null && endDate != null) {
-    startTimestamp = Timestamp.fromDate(startDate);
-    endTimestamp = Timestamp.fromDate(endDate);
-
+  if (startTimestamp != null && endTimestamp != null) {
     return _firestore
         .collection('history parking')
-        .where('startTime', isGreaterThanOrEqualTo: startTimestamp)
-        .where('endTime', isLessThanOrEqualTo: endTimestamp)
+        .where('startTime', isGreaterThanOrEqualTo: startDate.toIso8601String()) // 使用字符串比较
+        .where('startTime', isLessThanOrEqualTo: endDate.toIso8601String())     // 使用字符串比较
         .snapshots();
   } else {
     return _firestore.collection('history parking').snapshots();
@@ -113,15 +111,17 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     );
 
     if (picked != null) {
-    setState(() {
-      if (isStartDate) {
-        startDate = picked;
-      } 
-      else {
-        endDate = picked;
-      }
-    });
-  }
+      setState(() {
+        if (isStartDate) {
+          startDate = picked;
+          startTimestamp = Timestamp.fromDate(picked);
+        }
+        else {
+          endDate = picked;
+          endTimestamp = Timestamp.fromDate(picked);
+        }
+      });
+    }
 }
 
   Future<List<DateTime>> getAvailableDates() async {
@@ -129,10 +129,9 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
       QuerySnapshot snapshot = await _firestore.collection('history parking').get();
 
       List<DateTime> availableDates = snapshot.docs.map((doc) {
-        Timestamp startTimeTimestamp = doc['startTime'];  // 获取 Timestamp 类型的字段
-        DateTime startTimeDateTime = startTimeTimestamp.toDate();  // 转换为 DateTime
-
-       return DateTime(startTimeDateTime.year, startTimeDateTime.month, startTimeDateTime.day); 
+        String startTimeString = doc['startTime']; // 假设字段是 String
+        DateTime parsedDate = DateTime.parse(startTimeString); // 转换为 DateTime
+        return DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
       }).toList();
 
       // prevent duplicate date
@@ -349,6 +348,18 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
               },
             ),
 
+            ListTile(
+              leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
+              title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => CustomerListPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
           ],
         )
       ),
