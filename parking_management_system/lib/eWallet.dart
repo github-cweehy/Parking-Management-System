@@ -161,6 +161,10 @@ class _EWalletPaymentPageState extends State<EWalletPaymentPage> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your phone number';
                   }
+                  final RegExp phoneRegExp = RegExp(r'^\d{10,11}$');
+                  if (!phoneRegExp.hasMatch(value)) {
+                    return 'Please enter a valid phone number (10-11 digits)';
+                  }
                   return null;
                 },
               ),

@@ -24,11 +24,20 @@ class _PackagesHistoryPageState extends State<PackagesHistoryPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String username = '';
+  List<Map<String, dynamic>> _allPackageHistory = [];
+  List<Map<String, dynamic>> _filteredPackageHistory = [];
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _fetchUsername();
+    _fetchPackageHistory().then((history){
+      setState(() {
+        _allPackageHistory = history;
+        _filteredPackageHistory = _allPackageHistory;
+      });
+    });
   }
 
   Future<void> _fetchUsername() async {
@@ -44,12 +53,27 @@ class _PackagesHistoryPageState extends State<PackagesHistoryPage> {
 
   // Fetch history records from `packages_bought` collection where `userId` field matches
   Future<List<Map<String, dynamic>>> _fetchPackageHistory() async {
-    final querySnapshot = await FirebaseFirestore.instance
-        .collection('packages_bought')
-        .where('userId', isEqualTo: widget.userId)
-        .get();
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('packages_bought')
+          .where('userId', isEqualTo: widget.userId)
+          .get();
 
-    return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+        return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();    
+    } catch (e) {
+        print("Error fetching package history: $e");
+        return [];
+    }
+  }
+
+  void _filterPackageHistory(String query) {
+    setState(() {
+      _searchQuery = query;
+      _filteredPackageHistory = _allPackageHistory.where((history){
+        final duration = history['duration']?.toLowerCase()?? '';
+        return duration.contains(query.toLowerCase());
+      }).toList();
+    });
   }
 
   void _logout(BuildContext context) async {
@@ -226,160 +250,178 @@ class _PackagesHistoryPageState extends State<PackagesHistoryPage> {
           ],
         ),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _fetchPackageHistory(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return Center(
-              child: Card(
-                margin: EdgeInsets.all(20),
-                color: Colors.red,
-                child: Padding(
-                  padding: const EdgeInsets.all(30.0),
-                  child: Text(
-                    'No history available.',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
+      body: Column(
+        children: [
+          SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              onChanged: _filterPackageHistory,
+              decoration: InputDecoration(
+                labelText: 'Search by Duration',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.search),
               ),
-            );
-          }
-
-          final historyDocs = snapshot.data!;
-
-          return ListView.builder(
-            itemCount: historyDocs.length,
-            itemBuilder: (context, index) {
-              var data = historyDocs[index];
-
-              // Convert Timestamp to DateTime
-              DateTime startDate = data['startDate'].toDate();
-              DateTime endDate = data['endDate'].toDate();
-              
-              // Format the dates
-              String formattedStartDate = DateFormat('yyyy-MM-dd').format(startDate);
-              String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
-
-              return Card(
-                margin: EdgeInsets.all(10),
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_month, color: Colors.red),
-                          SizedBox(width: 20),
-                          Text(
-                            data['duration'],
-                            style: TextStyle(
-                              fontSize: 18, 
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green),
-                          ),
-                        ],
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _fetchPackageHistory(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return Center(
+                    child: Card(
+                      margin: EdgeInsets.all(20),
+                      color: Colors.red,
+                      child: Padding(
+                        padding: const EdgeInsets.all(30.0),
+                        child: Text(
+                          'No history available.',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      SizedBox(height: 10),
-
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.access_time, color: Colors.red),
-                              SizedBox(width: 10),
-                              Column(
-                                children: [
-                                  Text(
-                                    "Start Date : $formattedStartDate",
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-                                  ),
-                                  Text(
-                                    "End Date  : $formattedEndDate",
-                                    style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-                                  )
-                                ],
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[800],
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Text(
-                              data['vehiclePlate'],
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Icon(Icons.price_change, color: Colors.red),
-                          SizedBox(width: 10),
-                          Text(
-                            "RM ${data['price']}",
-                            style: TextStyle(fontSize: 16, color: Colors.black),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 25),
-                      Center(
-                        child: 
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => PackageReceiptPage(
-                                  duration: data['duration'] ?? 'Unknown package',
-                                  startDate: '$formattedStartDate',
-                                  endDate: '$formattedEndDate',
-                                  amount: data['price'] ?? 0,
-                                  vehiclePlate: data['vehiclePlate'] ?? 'N/A',
-                                ),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                              child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                    ),
+                  );
+                }
+            
+                final historyDocs = snapshot.data!;
+            
+                return ListView.builder(
+                  itemCount: _filteredPackageHistory.length,
+                  itemBuilder: (context, index) {
+                    var data = _filteredPackageHistory[index];
+            
+                    // Convert Timestamp to DateTime
+                    DateTime startDate = data['startDate'].toDate();
+                    DateTime endDate = data['endDate'].toDate();
+                    
+                    // Format the dates
+                    String formattedStartDate = DateFormat('yyyy-MM-dd').format(startDate);
+                    String formattedEndDate = DateFormat('yyyy-MM-dd').format(endDate);
+            
+                    return Card(
+                      margin: EdgeInsets.all(10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Icon(Icons.save_alt, color: Colors.white),
+                                Icon(Icons.calendar_month, color: Colors.red),
+                                SizedBox(width: 20),
                                 Text(
-                                  'Receipt',
-                                  style: TextStyle(fontSize: 16, color: Colors.white,)
+                                  data['duration'],
+                                  style: TextStyle(
+                                    fontSize: 18, 
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green),
                                 ),
                               ],
                             ),
-                          ),
+                            SizedBox(height: 10),
+            
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.access_time, color: Colors.red),
+                                    SizedBox(width: 10),
+                                    Column(
+                                      children: [
+                                        Text(
+                                          "Start Date : $formattedStartDate",
+                                          style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                        ),
+                                        Text(
+                                          "End Date  : $formattedEndDate",
+                                          style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+                                        )
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[800],
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    data['vehiclePlate'],
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Icon(Icons.price_change, color: Colors.red),
+                                SizedBox(width: 10),
+                                Text(
+                                  "RM ${data['price']}",
+                                  style: TextStyle(fontSize: 16, color: Colors.black),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 25),
+                            Center(
+                              child: 
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => PackageReceiptPage(
+                                        duration: data['duration'] ?? 'Unknown package',
+                                        startDate: '$formattedStartDate',
+                                        endDate: '$formattedEndDate',
+                                        amount: data['price'] ?? 0,
+                                        vehiclePlate: data['vehiclePlate'] ?? 'N/A',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                    child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.save_alt, color: Colors.white),
+                                      Text(
+                                        'Receipt',
+                                        style: TextStyle(fontSize: 16, color: Colors.white,)
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+            
+                          ],
                         ),
                       ),
-
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

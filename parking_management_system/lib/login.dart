@@ -197,7 +197,7 @@ class _LoginPageState extends State<LoginPage> {
                         // Update password in Firebase
                         String userId = userSnapshot.docs[0].id;
                         await _firestore
-                            .collection('admin')
+                            .collection('admins')
                             .doc(userId)
                             .update({'password': newPassword});
                         Navigator.pop(context);
