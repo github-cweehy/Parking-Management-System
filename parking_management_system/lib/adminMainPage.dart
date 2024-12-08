@@ -5,6 +5,7 @@ import 'package:parking_management_system/adminCustomerList.dart';
 import 'package:parking_management_system/adminPBHistory.dart';
 import 'package:parking_management_system/adminPBTransactionHistory.dart';
 import 'package:parking_management_system/adminPSTransactionHistory.dart';
+import 'package:parking_management_system/adminReward.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
 import 'adminPSHistory.dart';
@@ -261,6 +262,18 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   context, 
                   MaterialPageRoute(
                     builder: (context) => CustomerListPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => RewardPage(adminId: widget.adminId),
                   ),
                 );
               },
