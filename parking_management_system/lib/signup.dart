@@ -17,10 +17,13 @@ class _SignUpPageState extends State<SignUpPage> {
   String? username;
   String? password;
   String? phoneNumber;
+  bool isNotARobot = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
 
   Future<void> signUp() async {
-    // Check if all fields pass validation
-    if (_formKey.currentState!.validate()) {
+    // Check if all fields pass validation and the checkbox is checked
+    if (_formKey.currentState!.validate() && isNotARobot) {
       try {
         // Check for existing email in Firestore
         final QuerySnapshot emailresult = await _firestore
@@ -33,38 +36,40 @@ class _SignUpPageState extends State<SignUpPage> {
             SnackBar(
               content: Text('Email already exists. Please use another email.'),
               backgroundColor: Colors.red,
-              ),
+            ),
           );
           return;
         }
-    
-      // Check if username already exists
-      final QuerySnapshot usernameResult = await _firestore
-          .collection('users')
-          .where('username', isEqualTo: username)
-          .get();
-      if (usernameResult.docs.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Username already exists. Please choose another username.'),
-          backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
 
-      // Check if phone number already exists
-      final QuerySnapshot phoneResult = await _firestore
-          .collection('users')
-          .where('phone_number', isEqualTo: phoneNumber)
-          .get();
-      if (phoneResult.docs.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Phone number already exists. Please use another phone number.'),
-          backgroundColor: Colors.red,
-          ),
-        );
-        return;
-      }
+        // Check if username already exists
+        final QuerySnapshot usernameResult = await _firestore
+            .collection('users')
+            .where('username', isEqualTo: username)
+            .get();
+        if (usernameResult.docs.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Username already exists. Please choose another username.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
+
+        // Check if phone number already exists
+        final QuerySnapshot phoneResult = await _firestore
+            .collection('users')
+            .where('phone_number', isEqualTo: phoneNumber)
+            .get();
+        if (phoneResult.docs.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Phone number already exists. Please use another phone number.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return;
+        }
 
         // Add user details to Firestore
         await _firestore.collection('users').add({
@@ -90,6 +95,10 @@ class _SignUpPageState extends State<SignUpPage> {
           SnackBar(content: Text('An error occurred. Please try again.')),
         );
       }
+    } else if (!isNotARobot) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please confirm that you are not a robot.')),
+      );
     }
   }
 
@@ -238,7 +247,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
                   // Password Field
                   TextFormField(
-                    obscureText: true,
+                    obscureText: !_isPasswordVisible,
                     onChanged: (value) => password = value,
                     decoration: InputDecoration(
                       labelText: 'Password',
@@ -248,6 +257,18 @@ class _SignUpPageState extends State<SignUpPage> {
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
                       ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible
+                          ? Icons.visibility
+                          :Icons.visibility_off,
+                        ),
+                        onPressed: (){
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      )
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -266,7 +287,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
                   // Confirm Password Field
                   TextFormField(
-                    obscureText: true,
+                    obscureText: !_isConfirmPasswordVisible,
                     decoration: InputDecoration(
                       labelText: 'Confirm Password',
                       filled: true,
@@ -274,6 +295,18 @@ class _SignUpPageState extends State<SignUpPage> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isConfirmPasswordVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                          });
+                        },
                       ),
                     ),
                     validator: (value) {
@@ -304,7 +337,20 @@ class _SignUpPageState extends State<SignUpPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 5),
+
+                  // Checkbox for "I am not a robot"
+                  CheckboxListTile(
+                    title: const Text("I am not a robot"),
+                    value: isNotARobot,
+                    onChanged: (bool? value) {
+                      setState(() {
+                        isNotARobot = value ?? false;
+                      });
+                    },
+                    controlAffinity: ListTileControlAffinity.leading, // Checkbox on the left
+                  ),
+                  const SizedBox(height: 5),
 
                   // Sign Up Button
                   SizedBox(
