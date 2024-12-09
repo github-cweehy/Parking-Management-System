@@ -1,74 +1,68 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminCustomerList.dart';
-import 'package:parking_management_system/adminPBHistory.dart';
-import 'package:parking_management_system/adminPBTransactionHistory.dart';
-import 'package:parking_management_system/adminPSTransactionHistory.dart';
-import 'package:parking_management_system/adminReward.dart';
+
+import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
+import 'adminPBHistory.dart';
+import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
+import 'adminPSTransactionHistory.dart';
 import 'adminProfile.dart';
 import 'login.dart';
 
-
-
-class AdminMainPage extends StatefulWidget {
+class RewardPage extends StatefulWidget {
   final String adminId;
 
-  AdminMainPage({required this.adminId});
+  RewardPage({required this.adminId});
 
   @override
-  State<AdminMainPage> createState() => _AdminMainPageState();
+  _RewardPage createState() => _RewardPage();
 }
 
-class _AdminMainPageState extends State<AdminMainPage> {
-  String adminUsername = '';
+class _RewardPage extends State<RewardPage> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String admin_username = '';
 
   @override
   void initState() {
     super.initState();
-    _fetchUsername();
+    _fetchAdminUsername();
   }
 
-  Future<void> _fetchUsername() async {
+  // Fetch admin username from Firebase
+  void _fetchAdminUsername() async {
     try {
-      final adminDoc = await FirebaseFirestore.instance
-          .collection('admins')
-          .doc(widget.adminId)
-          .get();
-
-      setState(() {
-        adminUsername = adminDoc.data()?['admin_username'] ?? 'Admin Username';
-      });
+      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          admin_username = snapshot['admin_username'];
+        });
+      }
     } catch (e) {
       print("Error fetching admin username: $e");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading admin data. Please try again.')),
-      );
     }
   }
 
-  void _logout(BuildContext context) async {
+  void _logout(BuildContext context) async{
     try {
-      // Sign out from firebase authentication
+      // Sign out from Firebase Authentication
       await FirebaseAuth.instance.signOut();
-
-      // Navigate to LoginPage and replace current page
+      
+      // Navigate to LoginPage and replace the current page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
       );
     } catch (e) {
       // Handle any errors that occur during sign-out
-      print("Error sign out: $e");
+      print("Error signing out: $e");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error sign out. Please try again')),
+        SnackBar(content: Text('Error signing out. Please try again.')),
       );
     }
-  }
+  }  
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +79,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
           ),
         ),
         title: Image.asset(
-          'assets/logomelaka.jpg',
+          'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,
@@ -97,7 +91,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
               icon: Row(
                 children: [
                   Text(
-                    adminUsername,
+                    admin_username,
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(
@@ -121,11 +115,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     ),
                   );
                 } else if (value == 'Logout') {
+                  // Navigate to profile
                   _logout(context);
                 }
               },
             ),
-          ),
+          )
         ],
       ),
       drawer: Drawer(
@@ -266,172 +261,50 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 );
               },
             ),
-            ListTile(
-              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
-              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => RewardPage(adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
           ],
         )
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Parking Selection
-            CustomCard(
-              title: 'Parking Selection',
-              options: [
-                OptionItem(
-                  icon: Icons.edit,
-                  text: 'Edit Parking Selection',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
-                      ),
-                    );
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+                  onPressed: () {
+                    Navigator.pop(context);
                   },
                 ),
-                OptionItem(
-                  icon: Icons.history,
-                  text: 'Parking Selection History',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ParkingSelectionHistoryPage(adminId: widget.adminId),
-                      ),
-                    );
-                  },
-                ),
-                OptionItem(
-                  icon: Icons.payment,
-                  text: 'Transaction History',
-                  onTap: () {
-                    // Handle Payment History tap
-                    Navigator.push(
-                      context, 
-                      MaterialPageRoute(
-                        builder: (context) => ParkingSelectionTransactionHistoryPage(adminId: widget.adminId),
-                      ),
-                    );
-                  },
-                ),
+                SizedBox(width: 10),
+                Text("Reward History", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),)
               ],
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 8),
+            //Reward history
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(
+                        color: Colors.grey.shade400,
+                        width: 1.0,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
 
-            // Packages Bought 
-            CustomCard(
-              title: 'Packages Bought',
-              options: [
-                OptionItem(
-                  icon: Icons.edit,
-                  text: 'Edit Packages Bought',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
-                      ),
-                    );
-                  },
-                ),
-                OptionItem(
-                  icon: Icons.history,
-                  text: 'Packages Bought History',
-                  onTap: () {
-                    // Handle Packages Bought History tap
-                    Navigator.push(
-                      context, 
-                      MaterialPageRoute(
-                        builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
-                      ),
-                    );
-                  },
-                ),
-                OptionItem(
-                  icon: Icons.payment,
-                  text: 'Transaction History',
-                  onTap: () {
-                    // Handle Payment History tap
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PackagesBoughtTransactionHistoryPage(adminId: widget.adminId),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
+                    
+                  )
+                ],
+              )
+            )
           ],
         ),
       ),
-    );
-  }
-}
-
-class CustomCard extends StatelessWidget {
-  final String title;
-  final List<OptionItem> options;
-
-  CustomCard({required this.title, required this.options});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.grey.shade400, 
-              width: 1, 
-            ),
-          ),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 12),
-              Column(
-                children: options,
-              ),
-            ],
-          ),
-        );
-      }
-    }
-
-class OptionItem extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final VoidCallback onTap;
-
-  OptionItem({required this.icon, required this.text, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(text),
-      ),
+    
     );
   }
 }

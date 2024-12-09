@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:parking_management_system/adminMainPage.dart';
 import 'package:parking_management_system/adminProfile.dart';
+import 'adminCustomerList.dart';
 import 'adminEditParkingSelection.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
@@ -441,7 +442,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined, color: Colors.black, size: 23),
+              leading: Icon(Icons.payment, color: Colors.black, size: 23),
               title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
@@ -478,7 +479,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined, color: Colors.black, size: 23),
+              leading: Icon(Icons.payment, color: Colors.black, size: 23),
               title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
@@ -490,6 +491,18 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               },
             ),
 
+            ListTile(
+              leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
+              title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => CustomerListPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
           ],
         )
       ),
