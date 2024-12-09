@@ -273,7 +273,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => RewardPage(adminId: widget.adminId),
+                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
