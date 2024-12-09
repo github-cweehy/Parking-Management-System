@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'help.dart';
 import 'packages.dart';
 import 'favourite.dart';
 import 'history.dart';
@@ -618,6 +619,18 @@ class _MainPageState extends State<MainPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.red),
+              title: Text('Help Center', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HelpPage(userId: widget.userId),
                   ),
                 );
               },
