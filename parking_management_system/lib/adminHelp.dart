@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
+import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
 import 'adminPBHistory.dart';
@@ -10,20 +12,18 @@ import 'adminPSTransactionHistory.dart';
 import 'adminProfile.dart';
 import 'login.dart';
 
-class CustomerListPage extends StatefulWidget {
+class UserHelpPage extends StatefulWidget {
   final String adminId;
 
-  CustomerListPage({required this.adminId});
+  UserHelpPage({required this.adminId});
 
   @override
-  _CustomerListPage createState() => _CustomerListPage();
+  _UserHelpPage createState() => _UserHelpPage();
 }
 
-class _CustomerListPage extends State<CustomerListPage> {
+class _UserHelpPage extends State<UserHelpPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
-
-  List<Map<String, dynamic>> usersData = [];
 
   final Map<String, String> _usernameCache = {};
   Future<String> _fetchUsername(String userId) async{
@@ -54,14 +54,13 @@ class _CustomerListPage extends State<CustomerListPage> {
   void initState() {
     super.initState();
     _fetchAdminUsername();
-    _fetchUserData();
+    _fetchAllUsernames();
   }
 
   // Fetch admin username from Firebase
   void _fetchAdminUsername() async {
     try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('admins').doc(widget.adminId).get();
+      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['admin_username'];
@@ -73,20 +72,16 @@ class _CustomerListPage extends State<CustomerListPage> {
   }
 
   //Load all user data at once
-  void _fetchUserData() async {
+  void _fetchAllUsernames() async {
     try {
       QuerySnapshot snapshot = await _firestore.collection('users').get();
       setState(() {
-        usersData = snapshot.docs.map((doc){ 
-          return{
-            'username': doc['username'] ?? 'Unknown User',
-            'email': doc['email'] ?? 'Unknown Email',
-            'phone_number': doc['phone_number'] ?? 'Unknown PhoneNumber',
-          };
-        }).toList();
+        _usernameCache.addEntries(
+          snapshot.docs.map((doc) => MapEntry(doc.id, doc['username'] ?? 'Unknown User')),
+        );
       });
     } catch (e) {
-      print("Error fetching user data: $e");
+      print("Error fetching usernames: $e");
     }
   }
 
@@ -316,85 +311,17 @@ class _CustomerListPage extends State<CustomerListPage> {
                   },
                 ),
                 Text(
-                  "Users List",
+                  "Help",
                   style: TextStyle(
-                    fontSize: 20, 
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
             SizedBox(height: 8),
-
-            
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(
-                    color: Colors.grey,
-                    width: 1.0,
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: ListView.builder(
-                  itemCount: usersData.length,
-                  padding: const EdgeInsets.all(8.0),
-                  itemBuilder: (context, index){
-
-                    var user = usersData[index];
-                    var username = user['username'];
-                    var email = user['email'];
-                    var phonenum = user['phone_number'];
-
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.grey.shade400, width: 1.0),
-                      ),
-                      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.person, color: Colors.red, size: 20),
-                                SizedBox(width: 5),
-                                Text(username, style: TextStyle(fontSize: 16, color: Colors.black, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                            SizedBox(height: 3),
-                            Row(
-                              children: [
-                                Icon(Icons.email, color: Colors.red, size: 20),
-                                SizedBox(width: 5),
-                                Text(email, style: TextStyle(fontSize: 14, color: Colors.black)),
-                              ],
-                            ),
-                            SizedBox(height: 3),
-                            Row(
-                              children: [
-                                Icon(Icons.phone, color: Colors.red, size: 20),
-                                SizedBox(width: 5),
-                                Text(phonenum, style: TextStyle(fontSize: 14, color: Colors.black)),
-                              ],
-                            ),
-                            SizedBox(height: 3),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                ),
-              )
-            )
           ],
-        ),
-      ),
+        ),),
     );
   }
-
 }
