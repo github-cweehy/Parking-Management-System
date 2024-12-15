@@ -5,10 +5,12 @@ import 'package:intl/intl.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
+import 'adminHelp.dart';
 import 'adminPBHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
 import 'adminProfile.dart';
+import 'adminReward.dart';
 import 'login.dart';
 
 class PackagesBoughtTransactionHistoryPage extends StatefulWidget {
@@ -373,6 +375,30 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                   context, 
                   MaterialPageRoute(
                     builder: (context) => CustomerListPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => UserHelpPage(adminId: widget.adminId),
                   ),
                 );
               },

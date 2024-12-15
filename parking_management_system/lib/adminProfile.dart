@@ -3,12 +3,17 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path/path.dart' as path;
+import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
+import 'adminHelp.dart';
+import 'adminMainPage.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
+import 'adminReward.dart';
 import 'login.dart';
 import 'dart:io';
 
@@ -66,6 +71,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     }
   }
 
+  //Function to pick image from gallery
   void _pickImage() async {
     final ImagePicker _picker = ImagePicker();
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -75,12 +81,13 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     }
   }
 
+  //Function to upload image to Firebase Storage
   Future<void> _uploadProfilePicture(XFile image) async {
     try{
+      String fileName = path.basename(image.path);
       final Reference storageRef = FirebaseStorage.instance
         .ref()
-        .child('profile_picture')
-        .child('${widget.adminId}.jpg');
+        .child('admin_profilePicture/${widget.adminId}/$fileName');
 
         //upload picture
         UploadTask uploadTask = storageRef.putFile(File(image.path));
@@ -93,7 +100,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         await FirebaseFirestore.instance
          .collection('admins')
          .doc(widget.adminId)
-         .update({'profile_picture': downloadUrl});
+         .update({'admin_profilePicture': downloadUrl});
 
          setState(() {
            adminProfilePicture = downloadUrl;
@@ -103,26 +110,42 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
           SnackBar(content: Text('Profile picture updated successfully!')),
          );
     }catch(e) {
-      print("Erro uploading profile picture: $e");
+      print("Error uploading profile picture: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to upload profile picture. Please try again.')),
       );
     }
   }
 
+  //change password
   void _changePassword() async {
     String newPassword = newPasswordController.text.trim();
     String confirmPassword = confirmPasswordController.text.trim();
 
-    if(newPassword.isEmpty || confirmPassword.isEmpty){
+    if (newPassword.isEmpty || confirmPassword.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please fill you new password.')),
+        SnackBar(content: Text('Please fill in all fields.')),
       );
       return;
     }
-    if(newPassword != confirmPassword){
+
+    if (newPassword.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Password does not match.')),
+        SnackBar(content: Text('Password must be at least 8 characters long.')),
+      );
+      return;
+    }
+
+    RegExp passwordRegExp = RegExp(r'^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$');
+    if (!passwordRegExp.hasMatch(newPassword)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Password must include upper, lower, number, and special character.')),
+      );
+      return;
+    }
+    if (newPassword != confirmPassword) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Passwords do not match.')),
       );
       return;
     }
@@ -140,10 +163,59 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         //clear the text after successful update password
         newPasswordController.clear();
         confirmPasswordController.clear();
+
     }catch(e) {
       print("Failed to update password: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to update password. Please try again.')),
+      );
+    }
+  }
+
+  //avoid duplicate phone number
+  void _isPhoneNumberDuplicate(String phone_number) async {
+    try {
+      QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('phone_number', isEqualTo: phone_number)
+        .get();
+
+      QuerySnapshot adminSnapshot = await FirebaseFirestore.instance
+        .collection('admins')
+        .where('phone_number', isEqualTo: phone_number)
+        .get();
+
+      if(userSnapshot.docs.isNotEmpty || adminSnapshot.docs.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('This phone number is already exist.')),
+        );
+      }
+      else{
+        _savePhoneNumber(phone_number);
+      }
+    }catch(e) {
+      print("Error checking duplicate phone number: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to check phone number. Please try again.'))
+      );
+    }
+  }
+
+  //save the new phone number after duplicate check
+  void _savePhoneNumber(String phone_number) async {
+    try{
+      await FirebaseFirestore.instance
+        .collection('admins')
+        .doc(widget.adminId)
+        .update({'phone_number': phone_number});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Phone number updated successfully!')),
+      );
+    }catch(e) {
+      print("Error saving phone number: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update phone number. Please try again.')),
       );
     }
   }
@@ -263,13 +335,13 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.person, color: Colors.black, size: 23),
-              title: Text('Admin Profile', style: TextStyle(color: Colors.black, fontSize: 16)),
+              leading: Icon(Icons.home, color: Colors.black, size: 23),
+              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                    builder: (context) => AdminMainPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -313,7 +385,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined, color: Colors.black, size: 23),
+              leading: Icon(Icons.payment, color: Colors.black, size: 23),
               title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
@@ -350,7 +422,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined, color: Colors.black, size: 23),
+              leading: Icon(Icons.payment, color: Colors.black, size: 23),
               title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
@@ -361,7 +433,43 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                 );
               },
             ),
-
+            
+            ListTile(
+              leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
+              title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => CustomerListPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => UserHelpPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
           ],
         )
       ),
@@ -415,7 +523,12 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                         //Return Button
                         ElevatedButton(
                           onPressed: (){
-                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AdminMainPage(adminId: widget.adminId),
+                              )
+                            );
                           }, 
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
@@ -484,7 +597,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                           onPressed: () {
                             String newPhoneNumber = phoneController.text.trim();
                             if (newPhoneNumber != adminPhoneNumber) {
-                              _saveChanges('phone_number', newPhoneNumber);
+                              _isPhoneNumberDuplicate(newPhoneNumber);
                             }
                           },
                           style: ElevatedButton.styleFrom(
@@ -601,14 +714,5 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
 
   Future<void> _edit(String field, String currentValue) async{
     TextEditingController controller = TextEditingController(text: currentValue);
-  }
-
-  void _saveChanges(String field, String newValue) {
-    // handle saving the changes to Firebase or any other storage
-    print('Saving changes: $field = $newValue');
-    FirebaseFirestore.instance
-        .collection('admins')
-        .doc(widget.adminId)
-        .update({field: newValue});
   }
 }

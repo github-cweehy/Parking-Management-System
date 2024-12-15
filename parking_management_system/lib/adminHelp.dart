@@ -1,14 +1,17 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
+import 'adminMainPage.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
 import 'adminProfile.dart';
+import 'adminReward.dart';
 import 'login.dart';
 
 class UserHelpPage extends StatefulWidget {
@@ -24,13 +27,17 @@ class _UserHelpPage extends State<UserHelpPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
 
+  List<Map<String, dynamic>> helpMessages = [];
+
+  List<Map<String, dynamic>> usersData = [];
+
   final Map<String, String> _usernameCache = {};
   Future<String> _fetchUsername(String userId) async{
     if(_usernameCache.containsKey(userId)){
       return _usernameCache[userId]!;
     }
 
-    try{
+     try{
       DocumentSnapshot userSnapshot = await _firestore.collection('users').doc(userId).get();
       if(userSnapshot.exists){
         String username = userSnapshot['username'] ?? 'Unknown User';
@@ -53,7 +60,8 @@ class _UserHelpPage extends State<UserHelpPage> {
   void initState() {
     super.initState();
     _fetchAdminUsername();
-    _fetchAllUsernames();
+    _fetchUserData();
+    _fetchHelpMessages();
   }
 
   // Fetch admin username from Firebase
@@ -70,17 +78,56 @@ class _UserHelpPage extends State<UserHelpPage> {
     }
   }
 
-  //Load all user data at once
-  void _fetchAllUsernames() async {
+    //Load all user data at once
+    void _fetchUserData() async {
+      try {
+        QuerySnapshot snapshot = await _firestore.collection('users').get();
+        setState(() {
+          usersData = snapshot.docs.map((doc){ 
+            return{
+              'id': doc.id, 
+              'email': doc['email'] ?? 'Unknown Email',
+            };
+          }).toList();
+        });
+      } catch (e) {
+        print("Error fetching user data: $e");
+      }
+    }
+
+  //fetch Help Messages 
+  void _fetchHelpMessages() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('users').get();
-      setState(() {
-        _usernameCache.addEntries(
-          snapshot.docs.map((doc) => MapEntry(doc.id, doc['username'] ?? 'Unknown User')),
-        );
-      });
-    } catch (e) {
-      print("Error fetching usernames: $e");
+      QuerySnapshot snapshot = await _firestore.collection('help').get();
+
+      List<Map<String, dynamic>> messages = [];
+
+      for(var doc in snapshot.docs) {
+        String userId = doc['userId']; 
+        String username = await _fetchUsername(userId);
+        String problem = doc['problem'] ?? 'No problem description';
+        Timestamp timestamp = doc['timestamp'] ?? Timestamp.now();
+        String email = usersData.firstWhere(
+          (user) => user['id'] == userId, orElse: () => {'email': 'Unknown Email'}
+        )['email'];
+
+        DateTime dateTime = timestamp.toDate().toLocal();
+        dateTime = dateTime.add(Duration(hours: 8)); 
+        String formatDate = DateFormat('dd-MM-yyyy HH:mm').format(dateTime);
+
+        messages.add({
+          'username': username,
+          'email': email,
+          'problem': problem,
+          'timestamp': formatDate,
+        });
+
+        setState(() {
+          helpMessages = messages;
+        });
+      }
+    }catch(e) {
+      print('Error fetching messages: $e');
     }
   }
 
@@ -182,13 +229,13 @@ class _UserHelpPage extends State<UserHelpPage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.person, color: Colors.black, size: 23),
-              title: Text('Admin Profile', style: TextStyle(color: Colors.black, fontSize: 16)),
+              leading: Icon(Icons.home, color: Colors.black, size: 23),
+              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                    builder: (context) => AdminMainPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -293,6 +340,30 @@ class _UserHelpPage extends State<UserHelpPage> {
                 );
               },
             ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => UserHelpPage(adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
           ],
         )
       ),
@@ -318,9 +389,89 @@ class _UserHelpPage extends State<UserHelpPage> {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 1),
+            
+            Expanded(
+              child: ListView.builder(
+                itemCount: helpMessages.length,
+                itemBuilder: (context, index){
+                  final message = helpMessages[index];
+
+                  var username = message['username'];
+                  var problem = message['problem'];
+                  var email = message['email'];
+                  var timestamp = message['timestamp'];
+
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey, width: 1.0),
+                    ),
+                    margin: EdgeInsets.symmetric(vertical: 8),
+                    child: Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${username} :',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                              Spacer(),
+                              Text(
+                                '${message['timestamp']}',
+                                style: TextStyle(fontSize: 13, color: Colors.black),
+                              ),
+                              SizedBox(height: 2),
+                            ],
+                          ),
+                          SizedBox(height: 1),
+                          Row(
+                            children: [
+                              Text(
+                                '<${email}>',
+                                style: TextStyle(fontSize: 13, color: Colors.black),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.white),
+                                  ),
+                                  padding: EdgeInsets.all(12),
+                                  child: Text(
+                                    problem,
+                                    style: TextStyle(fontSize: 15, color: Colors.black),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 3),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+              )
+            ),
           ],
-        ),),
+        ),
+      ),
     );
   }
 }
