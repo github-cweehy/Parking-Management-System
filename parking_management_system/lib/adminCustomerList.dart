@@ -5,11 +5,13 @@ import 'package:parking_management_system/adminMainPage.dart';
 import 'package:parking_management_system/sa.manageaccount.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
+import 'adminHelp.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
 import 'adminProfile.dart';
+import 'adminReward.dart';
 import 'login.dart';
 
 class CustomerListPage extends StatefulWidget {
@@ -320,6 +322,30 @@ class _CustomerListPage extends State<CustomerListPage> {
                   context, 
                   MaterialPageRoute(
                     builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },

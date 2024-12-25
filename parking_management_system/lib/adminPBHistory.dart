@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:parking_management_system/adminMainPage.dart';
+import 'package:parking_management_system/packagereceipt.dart';
 import 'package:parking_management_system/sa.manageaccount.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
@@ -59,10 +60,26 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
   @override
   void initState() {
     super.initState();
+    _fetchSuperAdminUsername();
     _fetchAdminUsername();
     _fetchAllUsernames();
     startTimestamp = Timestamp.fromDate(startDate);
     endTimestamp = Timestamp.fromDate(endDate);
+  }
+
+  // Fetch admin username from Firebase
+  void _fetchSuperAdminUsername() async {
+    try {
+      DocumentSnapshot snapshot =
+          await _firestore.collection('superadmin').doc(widget.superadminId).get();
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          admin_username = snapshot['superadmin_username'];
+        });
+      }
+    } catch (e) {
+      print("Error fetching superadmin username: $e");
+    }
   }
 
   // Fetch admin username from Firebase
@@ -612,6 +629,7 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
                                         ],
                                       ),
                                     ),
+                                  
                                   ],
                                 ),
                               ),

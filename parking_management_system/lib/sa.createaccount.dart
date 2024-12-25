@@ -27,7 +27,7 @@ class CreateAdminAccountPage extends StatefulWidget {
 
 class _CreateAdminAccount extends State<CreateAdminAccountPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  String adminUsername = '';
+  String admin_username = '';
   var adminId;
 
   final _formKey = GlobalKey<FormState>();
@@ -105,13 +105,18 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
     }
   }
 
-  //Check access
-  void _checkSuperadminAccess() {
-    if(widget.superadminId.isEmpty) {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Access Denied: Superadmin Only')),
-      );
+  // Fetch admin username from Firebase
+  void _fetchSuperAdminUsername() async {
+    try {
+      DocumentSnapshot snapshot =
+          await _firestore.collection('superadmin').doc(widget.superadminId).get();
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          admin_username = snapshot['superadmin_username'];
+        });
+      }
+    } catch (e) {
+      print("Error fetching superadmin username: $e");
     }
   }
 
@@ -161,7 +166,7 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
               icon: Row(
                 children: [
                   Text(
-                    adminUsername,
+                    admin_username,
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(

@@ -61,9 +61,25 @@ class _UserHelpPage extends State<UserHelpPage> {
   @override
   void initState() {
     super.initState();
+    _fetchSuperAdminUsername();
     _fetchAdminUsername();
     _fetchUserData();
     _fetchHelpMessages();
+  }
+
+  // Fetch admin username from Firebase
+  void _fetchSuperAdminUsername() async {
+    try {
+      DocumentSnapshot snapshot =
+          await _firestore.collection('superadmin').doc(widget.superadminId).get();
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          admin_username = snapshot['superadmin_username'];
+        });
+      }
+    } catch (e) {
+      print("Error fetching superadmin username: $e");
+    }
   }
 
   // Fetch admin username from Firebase
