@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:parking_management_system/sa.manageaccount.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
@@ -15,9 +16,10 @@ import 'adminReward.dart';
 import 'login.dart';
 
 class UserHelpPage extends StatefulWidget {
-  final String adminId;
+  final String? adminId;
+  final String? superadminId;
 
-  UserHelpPage({required this.adminId});
+  UserHelpPage({required this.superadminId, required this.adminId});
 
   @override
   _UserHelpPage createState() => _UserHelpPage();
@@ -191,7 +193,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId, adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -235,24 +237,31 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => AdminMainPage(adminId: widget.adminId),
+                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
             ),
-
-            /*ListTile(
-              leading: Icon(Icons.groups, color: Colors.grey),
-              title: Text('Manage Admin Account', style: TextStyle(color: Colors.grey)),
+            
+            ListTile(
+              leading: Icon(Icons.groups, color: Colors.black),
+              title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
               onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => AdminProfilePage(adminId: widget.adminId),
-                  ),
-                );
+                if(widget.superadminId != null && widget.superadminId!.isNotEmpty) {
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    ),
+                  );
+                }
+                else{
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Access Denied: Superadmin Only!')),
+                  );
+                }
               },
-            ), */
+            ),
 
             ListTile(
               leading: Icon(Icons.edit, color: Colors.black, size: 23),
@@ -261,7 +270,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
+                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -273,7 +282,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -285,7 +294,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -298,7 +307,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
+                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -310,7 +319,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -322,7 +331,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -335,7 +344,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => CustomerListPage(adminId: widget.adminId),
+                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -347,7 +356,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
+                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -359,7 +368,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => UserHelpPage(adminId: widget.adminId),
+                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },

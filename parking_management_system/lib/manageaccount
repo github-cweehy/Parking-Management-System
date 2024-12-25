@@ -1,8 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminMainPage.dart';
-import 'package:parking_management_system/sa.createaccount.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
@@ -16,8 +14,8 @@ import 'adminReward.dart';
 import 'login.dart';
 
 class ManageAccountPage extends StatefulWidget {
-  final String? superadminId;
-  final String? adminId;
+  final String superadminId;
+    final String adminId;
   
   ManageAccountPage({required this.superadminId, required this.adminId});
 
@@ -27,6 +25,8 @@ class ManageAccountPage extends StatefulWidget {
 
 class _ManageAccountPage extends State<ManageAccountPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  
   String admin_username = '';
   String superadmin_username = '';
 
@@ -36,22 +36,16 @@ class _ManageAccountPage extends State<ManageAccountPage> {
   void initState() {
     super.initState();
     _fetchAdminAccounts();
-    _fetchAdminUsername();
-    _fetchSuperAdminUsername();
+    _checkSuperadminAccess();
   }
 
-  // Fetch admin username from Firebase
-  void _fetchSuperAdminUsername() async {
-    try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('superadmin').doc(widget.superadminId).get();
-      if (snapshot.exists && snapshot.data() != null) {
-        setState(() {
-          admin_username = snapshot['superadmin_username'];
-        });
-      }
-    } catch (e) {
-      print("Error fetching superadmin username: $e");
+  //Check access
+  void _checkSuperadminAccess() {
+    if(widget.superadminId.isEmpty) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Access Denied: Superadmin Only')),
+      );
     }
   }
 
@@ -60,82 +54,10 @@ class _ManageAccountPage extends State<ManageAccountPage> {
     try {
       QuerySnapshot snapshot = await _firestore.collection('admins').get();
        setState(() {
-        adminAccounts = snapshot.docs.map((doc) {
-          var data = doc.data() as Map<String, dynamic>;
-          data['docId'] = doc.id;
-          return data;
-        }).toList();
+        adminAccounts = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
       });
     } catch (e) {
       print("Error fetching admin accounts: $e");
-    }
-  }
-
-  // Fetch admin username from Firebase
-  void _fetchAdminUsername() async {
-    try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('admins').doc(widget.adminId).get();
-      if (snapshot.exists && snapshot.data() != null) {
-        setState(() {
-          admin_username = snapshot['admin_username'];
-        });
-      }
-    } catch (e) {
-      print("Error fetching admin username: $e");
-    }
-  }
-
-  //Show Dialog to confirm Delete Account
-  void _showDeleteAccountDialog(BuildContext context, int index) {
-    showDialog(
-      context: context, 
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Delete Admin Account"),
-          content: Text("Are you sure want to delete this account?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              }, 
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () {
-                _deleteAccount(adminAccounts[index]['docId'], index);
-
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Account deleted successfuly!")),
-                );
-              }, 
-              child: Text("Delete", style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      }
-    );
-  }
-
-  //Delete Account
-  void _deleteAccount(String docId, int index) async {
-    try {
-      await _firestore.collection('admins').doc(docId).delete();
-
-      setState(() {
-        adminAccounts.removeAt(index);
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Account deleted successfully.")),
-      );
-    } catch (e) {
-      print("Error deleting account: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to delete account. Please try again!")),
-      );
     }
   }
 
@@ -181,11 +103,17 @@ class _ManageAccountPage extends State<ManageAccountPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<String>(
-              underline: Container(),
+              underline: SizedBox(),
               icon: Row(
                 children: [
-                  Text(admin_username, style: TextStyle(color: Colors.black)),
-                  Icon(Icons.arrow_drop_down, color: Colors.black),
+                  Text(
+                    admin_username,
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.black,
+                  ),
                 ],
               ),
               items: <String>['Profile', 'Logout'].map((String value) {
@@ -199,15 +127,16 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(superadminId: '', adminId: ''),
+                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
+                  // Navigate to profile
                   _logout(context);
                 }
               },
             ),
-          ),
+          )
         ],
       ),
       drawer: Drawer(
@@ -236,39 +165,19 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 ],
               ),
             ),
-
+            if(widget.superadminId.isNotEmpty)
             ListTile(
-              leading: Icon(Icons.home, color: Colors.black, size: 23),
-              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
+              leading: Icon(Icons.groups, color: Colors.grey),
+              title: Text('Manage Admins Account', style: TextStyle(color: Colors.grey)),
               onTap: () {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId,),
                   ),
                 );
               },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.groups, color: Colors.black),
-              title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
-              onTap: () {
-                if(widget.superadminId != null && widget.superadminId!.isNotEmpty) {
-                  Navigator.push(
-                    context, 
-                    MaterialPageRoute(
-                      builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                    ),
-                  );
-                }
-                else{
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Access Denied: Superadmin Only!')),
-                  );
-                }
-              },
-            ),
+            ), 
 
             ListTile(
               leading: Icon(Icons.edit, color: Colors.black, size: 23),
@@ -277,7 +186,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -289,7 +198,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -301,7 +210,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionTransactionHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -314,7 +223,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -326,7 +235,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -338,7 +247,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtTransactionHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -351,7 +260,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => CustomerListPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -363,7 +272,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -375,7 +284,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => UserHelpPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -397,12 +306,20 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                   },
                 ),
                 SizedBox(width: 10),
-                Text("Manage Admin Account", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
+                Text("Manage Admin Account", style: TextStyle(fontSize: 20, color: Colors.black)),
               ],
             ),
             SizedBox(height: 1),
+
             Expanded(
-              child: ListView.builder(
+              child: adminAccounts.isEmpty
+                ? Center(
+                  child: Text(
+                    "Not Admin Data",
+                    style: TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
                 itemCount: adminAccounts.length,
                 itemBuilder: (context, index){
                   final admin = adminAccounts[index];
@@ -413,83 +330,16 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.red, width: 1.0),
                     ),
-                    margin: EdgeInsets.symmetric(vertical: 10),
+                    margin: EdgeInsets.symmetric(vertical: 8),
                     child: Padding(
-                      padding: EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.person, color: Colors.white, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                admin['admin_username'] ?? 'No Username',
-                                style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                              Spacer(),
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Colors.white, size: 20),
-                                onPressed: () async  {
-                                  _showDeleteAccountDialog(context, index);
-                                },
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Icon(Icons.email, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text(
-                                admin['email'] ?? 'No Email',
-                                style: TextStyle(fontSize: 14, color: Colors.white),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 3),
-                          Row(
-                            children: [
-                              Icon(Icons.phone_rounded, color: Colors.white, size: 18),
-                              SizedBox(width: 8),
-                              Text(
-                                admin['phone_number'] ?? 'No Phone Number',
-                                style: TextStyle(fontSize: 14, color: Colors.white),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 2),
-                        ],
+                      padding: EdgeInsets.all(6),
+                      child: Text(
+                        admin['admin_username'] ?? 'No Username',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ),
                   );
                 },
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(top: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton(
-                    onPressed: (){
-                      Navigator.push(
-                        context, 
-                        MaterialPageRoute(builder: (context) => CreateAdminAccountPage(superadminId: '', adminId: '')),
-                      );
-                    }, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: EdgeInsets.symmetric(horizontal: 35, vertical: 12),
-                    ),
-                    child: Text(
-                      "Create Account", 
-                      style: TextStyle(fontSize: 15, color: Colors.white),)
-                  ),
-                ],
               ),
             ),
           ],

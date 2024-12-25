@@ -5,17 +5,21 @@ import 'package:parking_management_system/adminMainPage.dart';
 import 'package:parking_management_system/adminProfile.dart';
 import 'adminCustomerList.dart';
 import 'adminEditParkingSelection.dart';
+import 'adminHelp.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
+import 'adminReward.dart';
 import 'login.dart';
+import 'sa.manageaccount.dart';
 
 
 class EditPackagesBoughtPage extends StatefulWidget {
-  final String adminId;
+  final String? adminId;
+  final String? superadminId;
 
-  EditPackagesBoughtPage({required this.adminId});
+  EditPackagesBoughtPage({required this.superadminId, required this.adminId});
 
   @override
   _EditPackagesBoughtPageState createState() => _EditPackagesBoughtPageState();
@@ -267,6 +271,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               child: Text("Cancel"),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
               onPressed: () {
                 setState(() {
                   // Validate the price input is valid
@@ -278,7 +283,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 });
                 Navigator.of(context).pop(); // Close dialog
               },
-              child: Text("Save"),
+              child: Text("Save", style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -353,7 +358,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId, adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -392,30 +397,37 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
               ),
             ),
             ListTile(
-              leading: Icon(Icons.person, color: Colors.black, size: 23),
-              title: Text('Admin Profile', style: TextStyle(color: Colors.black, fontSize: 16)),
+              leading: Icon(Icons.home, color: Colors.black, size: 23),
+              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
               onTap: () {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
             ),
 
-            /*ListTile(
-              leading: Icon(Icons.groups, color: Colors.grey),
-              title: Text('Manage Admin Account', style: TextStyle(color: Colors.grey)),
+            ListTile(
+              leading: Icon(Icons.groups, color: Colors.black),
+              title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
               onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => AdminProfilePage(adminId: widget.adminId),
-                  ),
-                );
+                if(widget.superadminId != null && widget.superadminId!.isNotEmpty) {
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    ),
+                  );
+                }
+                else{
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Access Denied: Superadmin Only!')),
+                  );
+                }
               },
-            ), */
+            ),
 
             ListTile(
               leading: Icon(Icons.edit, color: Colors.black, size: 23),
@@ -424,7 +436,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
+                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -436,7 +448,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -448,7 +460,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -461,7 +473,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
+                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -473,7 +485,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -485,7 +497,7 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -498,7 +510,31 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => CustomerListPage(adminId: widget.adminId),
+                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(
+                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },

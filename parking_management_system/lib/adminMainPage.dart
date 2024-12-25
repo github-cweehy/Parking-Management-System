@@ -7,33 +7,49 @@ import 'package:parking_management_system/adminPBHistory.dart';
 import 'package:parking_management_system/adminPBTransactionHistory.dart';
 import 'package:parking_management_system/adminPSTransactionHistory.dart';
 import 'package:parking_management_system/adminReward.dart';
+import 'package:parking_management_system/sa.manageaccount.dart';
 import 'adminEditPackagesBought.dart';
 import 'adminEditParkingSelection.dart';
 import 'adminPSHistory.dart';
 import 'adminProfile.dart';
 import 'login.dart';
 
-
-
 class AdminMainPage extends StatefulWidget {
-  final String adminId;
+  final String? superadminId;
+  final String? adminId;
 
-  AdminMainPage({required this.adminId});
+  AdminMainPage({required this.superadminId, required this.adminId});
 
   @override
   State<AdminMainPage> createState() => _AdminMainPageState();
 }
 
 class _AdminMainPageState extends State<AdminMainPage> {
-  String adminUsername = '';
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String admin_username = '';
 
   @override
   void initState() {
     super.initState();
-    _fetchUsername();
+    _fetchAdminUsername();
+    _fetchSuperAdminUsername();
   }
 
-  Future<void> _fetchUsername() async {
+  // Fetch superadmin username from Firebase
+  void _fetchSuperAdminUsername() async {
+    try {
+      DocumentSnapshot snapshot = await _firestore.collection('superadmin').doc(widget.superadminId).get();
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          admin_username = snapshot['superadmin_username'];
+        });
+      }
+    } catch (e) {
+      print("Error fetching superadmin username: $e");
+    }
+  }
+
+  Future<void> _fetchAdminUsername() async {
     try {
       final adminDoc = await FirebaseFirestore.instance
           .collection('admins')
@@ -41,14 +57,16 @@ class _AdminMainPageState extends State<AdminMainPage> {
           .get();
 
       setState(() {
-        adminUsername = adminDoc.data()?['admin_username'] ?? 'Admin Username';
+        admin_username = adminDoc.data()?['admin_username'] ?? 'Admin Username';
       });
     } catch (e) {
       print("Error fetching admin username: $e");
 
+      WidgetsBinding.instance.addPostFrameCallback((_) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error loading admin data. Please try again.')),
       );
+    });
     }
   }
 
@@ -98,7 +116,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
               icon: Row(
                 children: [
                   Text(
-                    adminUsername,
+                    admin_username,
                     style: TextStyle(color: Colors.black),
                   ),
                   Icon(
@@ -118,7 +136,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
+                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId, adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -162,24 +180,31 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => AdminMainPage(adminId: widget.adminId),
+                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
             ),
-        
-            /*ListTile(
-              leading: Icon(Icons.groups, color: Colors.grey),
-              title: Text('Manage Admin Account', style: TextStyle(color: Colors.grey)),
+
+            ListTile(
+              leading: Icon(Icons.groups, color: Colors.black),
+              title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
               onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => AdminProfilePage(adminId: widget.adminId),
-                  ),
-                );
+                if(widget.superadminId != null && widget.superadminId!.isNotEmpty) {
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    ),
+                  );
+                }
+                else{
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Access Denied: Superadmin Only!')),
+                  );
+                }
               },
-            ), */
+            ), 
 
             ListTile(
               leading: Icon(Icons.edit, color: Colors.black, size: 23),
@@ -188,7 +213,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
+                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -200,7 +225,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -212,7 +237,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -225,7 +250,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
+                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -237,7 +262,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -249,7 +274,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -262,7 +287,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => CustomerListPage(adminId: widget.adminId),
+                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -274,7 +299,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
+                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -286,7 +311,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => UserHelpPage(adminId: widget.adminId),
+                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -309,7 +334,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
+                        builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
                       ),
                     );
                   },
@@ -321,7 +346,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ParkingSelectionHistoryPage(adminId: widget.adminId),
+                        builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                       ),
                     );
                   },
@@ -334,7 +359,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     Navigator.push(
                       context, 
                       MaterialPageRoute(
-                        builder: (context) => ParkingSelectionTransactionHistoryPage(adminId: widget.adminId),
+                        builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                       ),
                     );
                   },
@@ -354,7 +379,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
+                        builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
                       ),
                     );
                   },
@@ -367,7 +392,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     Navigator.push(
                       context, 
                       MaterialPageRoute(
-                        builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
+                        builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                       ),
                     );
                   },
@@ -380,7 +405,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => PackagesBoughtTransactionHistoryPage(adminId: widget.adminId),
+                        builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
                       ),
                     );
                   },

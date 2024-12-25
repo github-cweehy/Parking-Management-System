@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminMainPage.dart';
 import 'package:parking_management_system/sa.manageaccount.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
@@ -14,25 +13,19 @@ import 'adminProfile.dart';
 import 'adminReward.dart';
 import 'login.dart';
 
-class ParkingSelectionHistoryPage extends StatefulWidget {
-  final String? superadminId;
-  final String? adminId;
+class ParkingSelectionHistory extends StatefulWidget {
+  final String adminId;
+  final String superadminId; 
 
-  ParkingSelectionHistoryPage({required this.superadminId, required this.adminId});
+  ParkingSelectionHistory({required this.adminId, required this.superadminId});
 
   @override
-  _ParkingSelectionHistoryPageState createState() => _ParkingSelectionHistoryPageState();
+  _ParkingSelectionHistory createState() => _ParkingSelectionHistory();
 }
 
-class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPage> {
+class _ParkingSelectionHistory extends State<ParkingSelectionHistory> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  DateTime startDate = DateTime.now();
-  DateTime endDate = DateTime.now();
   String admin_username = '';
-
-  Timestamp? startTimestamp;
-  Timestamp? endTimestamp;
 
   final Map<String, String> _usernameCache = {};
   Future<String> _fetchUsername(String userId) async{
@@ -42,7 +35,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
 
     try{
       DocumentSnapshot userSnapshot = await _firestore.collection('users').doc(userId).get();
-      if(userSnapshot.exists){
+      if(userSnapshot.exists && userSnapshot.data() != null){
         String username = userSnapshot['username'] ?? 'Unknown User';
         _usernameCache[userId] = username;
         return username;
@@ -57,11 +50,10 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   }
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _fetchAdminUsername();
-    startTimestamp = Timestamp.fromDate(startDate);
-    endTimestamp = Timestamp.fromDate(endDate);
+    _fetchAllUsernames();
   }
 
   // Fetch admin username from Firebase
@@ -79,103 +71,25 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     }
   }
 
-  Stream<QuerySnapshot> getFilteredData() {
-    if (startTimestamp != null && endTimestamp != null) {
-      return _firestore
-          .collection('history parking')
-          .where('startTime', isGreaterThanOrEqualTo: startTimestamp)
-          .where('startTime', isLessThanOrEqualTo: endTimestamp)
-          .snapshots();
-    } else {
-      return _firestore.collection('history parking').snapshots();
-    }
-  }
-
-
-  void _selectDate(BuildContext context, bool isStartDate) async {
-    List<DateTime> availableDates = await getAvailableDates();
-
-if (availableDates.isEmpty) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text("No available dates to select.")),
-  );
-  return;
-}
-
-DateTime minDate = availableDates.reduce((a, b) => a.isBefore(b) ? a : b);
-DateTime maxDate = availableDates.reduce((a, b) => a.isAfter(b) ? a : b);
-
-final DateTime? picked = await showDatePicker(
-  context: context,
-  initialDate: availableDates.isNotEmpty ? availableDates.first : DateTime.now(), // 确保初始日期是有效的
-  firstDate: minDate,
-  lastDate: maxDate,
-  selectableDayPredicate: (date) {
-    // 只允许选择可用日期
-    return availableDates.contains(DateTime(date.year, date.month, date.day));
-  },
-);
-
-
-    if (picked != null) {
-      setState(() {
-        if (isStartDate) {
-          startDate = picked;
-          startTimestamp = Timestamp.fromDate(picked);
-        }
-        else {
-          endDate = picked;
-          endTimestamp = Timestamp.fromDate(picked);
-        }
-      });
-    }
-  }
-
-
-  Future<List<DateTime>> getAvailableDates() async {
+  //Load all user data at once
+  void _fetchAllUsernames() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('history parking').get();
-
-      List<DateTime> availableDates = snapshot.docs.map((doc) {
-        var data = doc.data() as Map<String, dynamic>;  
-        if (data.containsKey('startTime')) {  
-          var startTime = data['startTime'];  
-          
-          if (startTime is Timestamp) {
-            DateTime parsedDate = startTime.toDate();
-            return DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
-          } else {
-            print('Warning: startTime is not a Timestamp in document ${doc.id}');
-            return DateTime.now(); 
-          }
-        } else {
-          print('Warning: startTime field missing in document ${doc.id}');
-          return DateTime.now(); 
-        }
-      }).toList();
-
-      return availableDates;
+      QuerySnapshot snapshot = await _firestore.collection('users').get();
+      setState(() {
+        _usernameCache.addEntries(
+          snapshot.docs.map((doc) => MapEntry(doc.id, doc['username'] ?? 'Unknown User')),
+        );
+      });
     } catch (e) {
-      print("Error fetching available dates: $e");
-      return [];
+      print("Error fetching usernames: $e");
     }
   }
 
-
-  void _loadDataForDate(DateTime date) {
-    setState(() {
-      startDate = date;
-      endDate = date;
-      startTimestamp = Timestamp.fromDate(startDate);
-      endTimestamp = Timestamp.fromDate(endDate);
-    });
-  }
-
-  void _logout(BuildContext context) async{
+  void _logout(BuildContext context) async {
     try {
       // Sign out from Firebase Authentication
       await FirebaseAuth.instance.signOut();
-      
+
       // Navigate to LoginPage and replace the current page
       Navigator.pushReplacement(
         context,
@@ -188,7 +102,7 @@ final DateTime? picked = await showDatePicker(
         SnackBar(content: Text('Error signing out. Please try again.')),
       );
     }
-  } 
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -205,22 +119,22 @@ final DateTime? picked = await showDatePicker(
           ),
         ),
         title: Image.asset(
-          'assets/logomelaka.jpg', 
-          height: 60
+          'assets/logomelaka.jpg',
+          height: 60,
         ),
         centerTitle: true,
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<String>(
-              underline: Container(),
+              underline: SizedBox(),
               icon: Row(
                 children: [
                   Text(admin_username, style: TextStyle(color: Colors.black)),
                   Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
-              items: ['Profile', 'Logout'].map((String value) {
+              items: <String>['Profile', 'Logout'].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -228,10 +142,10 @@ final DateTime? picked = await showDatePicker(
               }).toList(),
               onChanged: (String? value) {
                 if (value == 'Profile') {
-                  Navigator.pushReplacement(
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId, adminId: widget.adminId),
+                      builder: (context) => AdminProfilePage(adminId: widget.adminId),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -268,38 +182,20 @@ final DateTime? picked = await showDatePicker(
                 ],
               ),
             ),
+          
+            if(widget.superadminId.isNotEmpty)
             ListTile(
-              leading: Icon(Icons.home, color: Colors.black, size: 23),
-              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
+              leading: Icon(Icons.groups, color: Colors.grey),
+              title: Text('Manage Admins Account', style: TextStyle(color: Colors.grey)),
               onTap: () {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.groups, color: Colors.black),
-              title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
-              onTap: () {
-                if(widget.superadminId != null && widget.superadminId!.isNotEmpty) {
-                  Navigator.push(
-                    context, 
-                    MaterialPageRoute(
-                      builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                    ),
-                  );
-                }
-                else{
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Access Denied: Superadmin Only!')),
-                  );
-                }
-              },
-            ),
+            ), 
 
             ListTile(
               leading: Icon(Icons.edit, color: Colors.black, size: 23),
@@ -308,7 +204,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => EditParkingSelectionPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -320,7 +216,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionHistory(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
               },
@@ -332,7 +228,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ParkingSelectionTransactionHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -345,7 +241,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => EditPackagesBoughtPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -357,7 +253,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -369,7 +265,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => PackagesBoughtTransactionHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -382,7 +278,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => CustomerListPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -394,7 +290,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => RewardHistoryPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -406,7 +302,7 @@ final DateTime? picked = await showDatePicker(
                 Navigator.push(
                   context, 
                   MaterialPageRoute(
-                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => UserHelpPage(adminId: widget.adminId),
                   ),
                 );
               },
@@ -428,7 +324,7 @@ final DateTime? picked = await showDatePicker(
                   },
                 ),
                 Text(
-                  "Parking Selection History", 
+                  "Parking Selection History",
                   style: TextStyle(
                     fontSize: 20, 
                     fontWeight: FontWeight.bold,
@@ -437,92 +333,7 @@ final DateTime? picked = await showDatePicker(
               ],
             ),
             SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Start Date Section
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(left: 10.0),
-                      child: 
-                        Text("Start Date", style: TextStyle(fontSize: 13)),
-                    ),
-                    GestureDetector(
-                      onTap: () => _selectDate(context, true),
-                      child: Container(
-                        width: 185,
-                        height: 40,
-                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade400),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.calendar_month,
-                              color: Colors.grey,
-                              size: 20, 
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              "${startDate.day} ${_monthName(startDate.month)} ${startDate.year}",
-                              style: TextStyle(color: Colors.black, fontSize: 13.5),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
 
-                // End Date Section
-               Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(left: 10.0),
-                      child: 
-                        Text("End Date", style: TextStyle(fontSize: 13)),
-                    ),
-
-                    GestureDetector(
-                      onTap: () => _selectDate(context, false),
-                      child: Container(
-                        width: 185,
-                        height: 40,
-                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 18),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade400),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.calendar_month,
-                              color: Colors.grey,
-                              size: 20, 
-                            ),
-                            SizedBox(width: 5),
-                            Text(
-                              "${endDate.day} ${_monthName(endDate.month)} ${endDate.year}",
-                              style: TextStyle(color: Colors.black, fontSize: 13.5),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
             Expanded(
               child: Stack(
                 children: [
@@ -535,35 +346,9 @@ final DateTime? picked = await showDatePicker(
                       ),
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: getFilteredData(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return Center(child: CircularProgressIndicator());
-                        }
-                        if (snapshot.hasError) {
-                          return Center(child: Text('Error: ${snapshot.error}'));
-                        }
-                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return Center(child: Text(
-                            startTimestamp != null && endTimestamp != null
-                                ? 'No data found for the selected date.'
-                                : 'No records available.'
-                          ),
-                          );
-                        }
+                    
 
-                        var history = snapshot.data!.docs;
-
-                        return ListView.builder(
-                          itemCount: history.length,
-                          itemBuilder: (context, index) {
-                            var record = history[index];
-                            var username = record['username'] ?? 'Anonymous';
-                            var pricingOption = record['pricingOption'] ?? 'Unknown';
-                            var price = double.tryParse(record['price'].toString()) ?? 0.0;
-
-                            return Card(
+                    return Card(
                               color: Colors.red,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
@@ -614,25 +399,12 @@ final DateTime? picked = await showDatePicker(
                                 ),
                               ),
                             );
-                          },
-                        );
-                      },
-                    ),
-                  ),
+                  )
                 ],
-              ),
-            ),
+              ))
           ],
         ),
       ),
     );
-  }
-
-  String _monthName(int month) {
-    List<String> monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
-    return monthNames[month - 1];
   }
 }
