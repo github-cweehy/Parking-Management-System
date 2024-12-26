@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'login.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 
-
 Future<void> main() async {
   AwesomeNotifications().initialize(
     null,

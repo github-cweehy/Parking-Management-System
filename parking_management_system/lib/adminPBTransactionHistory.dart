@@ -25,7 +25,7 @@ class PackagesBoughtTransactionHistoryPage extends StatefulWidget {
   _PackagesBoughtTransactionHistoryPage createState() => _PackagesBoughtTransactionHistoryPage();
 }
 
-class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransactionHistoryPage>{
+class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransactionHistoryPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   String admin_username = '';
@@ -36,32 +36,31 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
   Timestamp? endTimestamp;
 
   final Map<String, String> _usernameCache = {};
-  Future<String> _fetchUsername(String userId) async{
-    if(_usernameCache.containsKey(userId)){
+  Future<String> _fetchUsername(String userId) async {
+    if (_usernameCache.containsKey(userId)) {
       return _usernameCache[userId]!;
     }
 
-    try{
+    try {
       DocumentSnapshot userSnapshot = await _firestore.collection('users').doc(userId).get();
-      if(userSnapshot.exists){
+      if (userSnapshot.exists) {
         String username = userSnapshot['username'] ?? 'Unknown User';
         setState(() {
           _usernameCache[userId] = username;
         });
-        
+
         return username;
-      }
-      else{
+      } else {
         return 'Unknown User';
       }
-    }catch(e){
+    } catch (e) {
       print('Error fetching username for userId $userId: $e');
       return 'Unknown User';
     }
   }
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     _fetchSuperAdminUsername();
     _fetchAdminUsername();
@@ -73,8 +72,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
   // Fetch admin username from Firebase
   void _fetchSuperAdminUsername() async {
     try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('superadmin').doc(widget.superadminId).get();
+      DocumentSnapshot snapshot = await _firestore.collection('superadmin').doc(widget.superadminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['superadmin_username'];
@@ -88,8 +86,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
   // Fetch admin username from Firebase
   void _fetchAdminUsername() async {
     try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('admins').doc(widget.adminId).get();
+      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['admin_username'];
@@ -116,11 +113,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
 
   Stream<QuerySnapshot> getFilteredData() {
     if (startTimestamp != null && endTimestamp != null) {
-      return _firestore
-          .collection('transactions')
-          .where('timestamp', isGreaterThanOrEqualTo: startTimestamp)
-          .where('timestamp', isLessThanOrEqualTo: endTimestamp)
-          .snapshots();
+      return _firestore.collection('transactions').where('timestamp', isGreaterThanOrEqualTo: startTimestamp).where('timestamp', isLessThanOrEqualTo: endTimestamp).snapshots();
     } else {
       return _firestore.collection('transactions').snapshots();
     }
@@ -189,11 +182,11 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
     });
   }
 
-  void _logout(BuildContext context) async{
+  void _logout(BuildContext context) async {
     try {
       // Sign out from Firebase Authentication
       await FirebaseAuth.instance.signOut();
-      
+
       // Navigate to LoginPage and replace the current page
       Navigator.pushReplacement(
         context,
@@ -206,7 +199,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
         SnackBar(content: Text('Error signing out. Please try again.')),
       );
     }
-  } 
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -216,11 +209,10 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color:  Colors.black),
-            onPressed: (){
-              Scaffold.of(context).openDrawer();
-            }
-          ),
+              icon: Icon(Icons.menu, color: Colors.black),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              }),
         ),
         title: Image.asset(
           'assets/logomelaka.jpg',
@@ -238,7 +230,10 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                   Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
-              items: <String>['Profile', 'Logout'].map((String value) {
+              items: <String>[
+                'Profile',
+                'Logout'
+              ].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -261,177 +256,171 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
         ],
       ),
       drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.red,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Image.asset(
-                    'assets/logomelaka.jpg',
-                    height: 60,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Melaka Parking',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                    ),
-                  ), 
-                ],
-              ),
+          child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.red,
             ),
-            ListTile(
-              leading: Icon(Icons.home, color: Colors.black, size: 23),
-              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Image.asset(
+                  'assets/logomelaka.jpg',
+                  height: 60,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Melaka Parking',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.home, color: Colors.black, size: 23),
+            title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.groups, color: Colors.black),
+            title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
+            onTap: () {
+              if (widget.superadminId != null && widget.superadminId!.isNotEmpty) {
                 Navigator.push(
-                  context, 
+                  context,
                   MaterialPageRoute(
-                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.groups, color: Colors.black),
-              title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
-              onTap: () {
-                if(widget.superadminId != null && widget.superadminId!.isNotEmpty) {
-                  Navigator.push(
-                    context, 
-                    MaterialPageRoute(
-                      builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                    ),
-                  );
-                }
-                else{
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Access Denied: Superadmin Only!')),
-                  );
-                }
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.black, size: 23),
-              title: Text('Edit Parking Selection', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Access Denied: Superadmin Only!')),
                 );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.black, size: 23),
-              title: Text('Parking Selection History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.payment, color: Colors.black, size: 23),
-              title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-          
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.black, size: 23),
-              title: Text('Edit Packages Bought', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.black, size: 23),
-              title: Text('Packages Bought History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.payment, color: Colors.black, size: 23),
-              title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
-              title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
-              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
-              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-          ],
-        )
-      ),
+              }
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.edit, color: Colors.black, size: 23),
+            title: Text('Edit Parking Selection', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: Colors.black, size: 23),
+            title: Text('Parking Selection History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.payment, color: Colors.black, size: 23),
+            title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.edit, color: Colors.black, size: 23),
+            title: Text('Edit Packages Bought', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: Colors.black, size: 23),
+            title: Text('Packages Bought History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.payment, color: Colors.black, size: 23),
+            title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
+            title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+            title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+            title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+        ],
+      )),
       body: Padding(
         padding: EdgeInsets.all(16.0),
         child: Column(
@@ -448,7 +437,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                 Text(
                   "Packages Bought Transaction History",
                   style: TextStyle(
-                    fontSize: 18, 
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -464,8 +453,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                   children: [
                     Padding(
                       padding: EdgeInsets.only(left: 10.0),
-                      child: Text(
-                        "Start Date", style: TextStyle(fontSize: 13)),
+                      child: Text("Start Date", style: TextStyle(fontSize: 13)),
                     ),
                     GestureDetector(
                       onTap: () => _selectDate(context, true),
@@ -505,7 +493,6 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                       padding: EdgeInsets.only(left: 10.0),
                       child: Text("End Date", style: TextStyle(fontSize: 13)),
                     ),
-
                     GestureDetector(
                       onTap: () => _selectDate(context, false),
                       child: Container(
@@ -561,11 +548,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                           return Center(child: Text('Error: ${snapshot.error}'));
                         }
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                          return Center(child: Text(
-                            startTimestamp != null && endTimestamp != null
-                                ? 'No data found for the selected date.'
-                                : 'No records available.'
-                          ));
+                          return Center(child: Text(startTimestamp != null && endTimestamp != null ? 'No data found for the selected date.' : 'No records available.'));
                         }
 
                         var transactions = snapshot.data!.docs;
@@ -575,7 +558,7 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                           itemCount: transactions.length,
                           itemBuilder: (context, index) {
                             var transaction = transactions[index];
-                            var userId = transaction['userId']; 
+                            var userId = transaction['userId'];
                             var username = _usernameCache[userId] ?? 'Unknown User';
                             var transactionId = transaction.id;
                             var package = transaction['packages']; //transactions packages
@@ -584,40 +567,34 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                             var payment = transaction['paymentMethod'];
                             final price = transaction['amount'].toStringAsFixed(2) ?? 0.0;
 
-                            //Format dates and times
-                            DateTime dateTime = timestamp.toDate().toLocal();
-                            //Adjust time to the UTC+8 time zone
-                            dateTime = dateTime.add(Duration(hours: 8)); 
-                            String formatdateTime = DateFormat('d MMM yyyy  h:mm a').format(dateTime);
-
                             //Determine if packages is null
-                            if(package == null){
+                            if (package == null) {
                               return SizedBox.shrink();
                             }
 
                             return FutureBuilder<DocumentSnapshot>(
                               future: _firestore.collection('packages_bought').doc(packageId).get(),
-                              builder: (context, packageSnapshot){
-                                if(packageSnapshot.connectionState == ConnectionState.waiting) {
+                              builder: (context, packageSnapshot) {
+                                if (packageSnapshot.connectionState == ConnectionState.waiting) {
                                   return CircularProgressIndicator();
                                 }
                                 if (packageSnapshot.hasError) {
                                   return Text('Error fetching parking details');
                                 }
                                 if (!packageSnapshot.hasData || !packageSnapshot.data!.exists) {
-                                  return SizedBox.shrink(); 
+                                  return SizedBox.shrink();
                                 }
 
                                 //Get startTime endTime from packages_bought
                                 var packageData = packageSnapshot.data!;
                                 Timestamp startTimestamp = packageData['startDate'];
-                                Timestamp endTimestamp = packageData['endDate']; 
+                                Timestamp endTimestamp = packageData['endDate'];
 
                                 //String convert to DateTime &(packages_bought)duration (transactions packagesId)
-                                DateTime startDate = startTimestamp.toDate();
-                                DateTime endDate = endTimestamp.toDate();
+                                DateTime startDate = startTimestamp.toDate().add(Duration(hours: 8));
+                                DateTime endDate = endTimestamp.toDate().add(Duration(hours: 8));
                                 String duration = packageData['duration'] ?? 'Not available';
-                                String PlateNum = packageData['vehiclePlate'] ??'Not available';
+                                String PlateNum = packageData['vehiclePlate'] ?? 'Not available';
 
                                 //format datetime
                                 String formatStartTime = DateFormat('d MMM yyyy h:mm a').format(startDate);
@@ -653,22 +630,17 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                                           ],
                                         ),
                                         SizedBox(height: 8),
-
-                                        Row(
-                                          children: [
-                                            Icon(Icons.calendar_month_outlined, color: Colors.grey, size: 16),
-                                            SizedBox(width: 3),
-                                            Text(formatStartTime, style: TextStyle(fontSize: 13, color: Colors.black)),
-                                          ]
-                                        ),
+                                        Row(children: [
+                                          Icon(Icons.calendar_month_outlined, color: Colors.grey, size: 16),
+                                          SizedBox(width: 3),
+                                          Text(formatStartTime, style: TextStyle(fontSize: 13, color: Colors.black)),
+                                        ]),
                                         SizedBox(height: 3),
-                                        Row(
-                                          children: [
-                                            Icon(Icons.calendar_month_outlined, color: Colors.grey, size: 16),
-                                            SizedBox(width: 3),
-                                            Text(formatEndTime, style: TextStyle(fontSize: 13, color: Colors.black)),
-                                          ]
-                                        ),
+                                        Row(children: [
+                                          Icon(Icons.calendar_month_outlined, color: Colors.grey, size: 16),
+                                          SizedBox(width: 3),
+                                          Text(formatEndTime, style: TextStyle(fontSize: 13, color: Colors.black)),
+                                        ]),
                                         SizedBox(height: 3),
                                         Row(
                                           children: [
@@ -692,7 +664,6 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                                             SizedBox(width: 3),
                                             Text(PlateNum, style: TextStyle(fontSize: 13, color: Colors.black)),
                                             Spacer(),
-
                                             Text('RM $price', style: TextStyle(fontSize: 16, color: Colors.green)),
                                           ],
                                         ),
@@ -719,10 +690,19 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
 
   String _monthName(int month) {
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June', 
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return monthNames[month - 1];
   }
-
 }
