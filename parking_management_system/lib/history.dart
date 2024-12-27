@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'favourite.dart';
+import 'help.dart';
 import 'packages.dart';
 import 'packageshistory.dart';
 import 'parkingreceipt.dart';
@@ -182,14 +183,16 @@ class _HistoryPageState extends State<HistoryPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => MainPage(userId: widget.userId),
+                    builder: (context) => MainPage(
+                      userId: widget.userId,
+                    ),
                   ),
                 );
               },
             ),
             ListTile(
-              leading: Icon(Icons.history, color: Colors.red),
-              title: Text('History', style: TextStyle(color: Colors.red)),
+              leading: Icon(Icons.history, color: Colors.red,),
+              title: Text('Parking History', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.push(
                   context,
@@ -201,7 +204,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             ListTile(
               leading: Icon(Icons.favorite, color: Colors.red),
-              title: Text('Favourite', style: TextStyle(color: Colors.red)),
+              title: Text('Favorite', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.push(
                   context,
@@ -243,6 +246,18 @@ class _HistoryPageState extends State<HistoryPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.red),
+              title: Text('Help Center', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HelpPage(userId: widget.userId),
                   ),
                 );
               },
@@ -387,7 +402,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                         startTime: data['startTime'] ?? 'N/A',
                                         endTime: data['endTime'] ?? 'N/A',
                                         amount: double.tryParse(data['price'] ?? '0') ?? 0,
-                                        type: data['type'] ?? 'N/A',
+                                        type: data['pricingOption'] ?? 'N/A',
                                       ),
                                     ),
                                   );

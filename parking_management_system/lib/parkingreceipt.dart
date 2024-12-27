@@ -7,7 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 
 
-class ParkingReceiptPage extends StatelessWidget {
+class ParkingReceiptPage extends StatelessWidget 
+{
   final String district;
   final String startTime;
   final String endTime;
