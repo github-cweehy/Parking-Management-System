@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:parking_management_system/favourite.dart';
 import 'package:path/path.dart' as path;
+import 'help.dart';
 import 'history.dart';
 import 'mainpage.dart';
 import 'packages.dart';
@@ -503,6 +504,18 @@ void _setDefaultVehicle(String registrationNumber) async {
                     context,
                     MaterialPageRoute(
                       builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.help_outline_sharp, color: Colors.red),
+                title: Text('Help Center', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HelpPage(userId: widget.userId),
                     ),
                   );
                 },
