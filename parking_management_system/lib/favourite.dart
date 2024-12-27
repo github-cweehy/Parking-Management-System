@@ -333,18 +333,40 @@ class _FavouritePageState extends State<FavouritePage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AddParkingPage(
-                                  userparkingselectionID: docId, // Pass the document ID
-                                  location: favourite['location'], // Pass location
-                                  pricingOption: favourite['pricingOption'] ?? 'Daily', // Pass pricing option, default to 'Daily'
-                                  userId: widget.userId, // Pass the user ID
+                          onPressed: () async {
+                            try {
+                              // Create a new parking record in Firestore
+                              DocumentReference newParkingDoc = await FirebaseFirestore.instance
+                                  .collection('history parking')
+                                  .add({
+                                'userId': widget.userId,
+                                'location': favourite['location'],
+                                'pricingOption': favourite['pricingOption'] ?? 'N/A',
+                                'vehiclePlateNum': favourite['vehiclePlateNum'],
+                                'price': favourite['price'],
+                                'startTime': DateTime.now().toString(),
+                                'endTime': DateTime.now().add(Duration(hours: 1)).toString(), // Default duration
+                                'status': 'temporary',
+                              });
+
+                              // Navigate to AddParkingPage with the newly created parking record
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddParkingPage(
+                                    userparkingselectionID: newParkingDoc.id, // Pass the new document ID
+                                    location: favourite['location'], 
+                                    pricingOption: favourite['pricingOption'] ?? 'N/A',
+                                    userId: widget.userId,
+                                  ),
                                 ),
-                              ),
-                            );
+                              );
+                            } catch (e) {
+                              print("Error adding parking record: $e");
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error adding parking record. Please try again.')),
+                              );
+                            }
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                           child: Row(

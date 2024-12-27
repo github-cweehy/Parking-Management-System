@@ -73,7 +73,7 @@ Future<void> _fetchPricing() async {
   try {
     final pricingDoc = await FirebaseFirestore.instance
         .collection('parkingselection')
-        .doc(widget.pricingOption) // Assuming the document ID matches the pricing option (e.g., 'Hourly', 'Daily', etc.)
+        .doc(widget.pricingOption) 
         .get();
 
     if (pricingDoc.exists) {
@@ -264,25 +264,43 @@ Future<void> _fetchPricing() async {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: Colors.black),
-            onPressed: () async{
-              try {
-                await FirebaseFirestore.instance
+          onPressed: () async {
+            try {
+              // Fetch the parking document
+              DocumentSnapshot parkingDoc = await FirebaseFirestore.instance
                   .collection('history parking')
                   .doc(widget.userparkingselectionID)
-                  .delete();
-                
-                Navigator.pushReplacement(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => MainPage(userId: widget.userId),
-                  ),
-                );
-              } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error deleting data. Please try again.')),
-                );
+                  .get();
+
+              // Check if the document exists and has the "temporary" status
+              if (parkingDoc.exists) {
+                Map<String, dynamic>? data = parkingDoc.data() as Map<String, dynamic>?;
+                if (data != null && data['status'] == 'temporary') {
+                  // Delete the document
+                  await FirebaseFirestore.instance
+                      .collection('history parking')
+                      .doc(widget.userparkingselectionID)
+                      .delete();
+
+                  print("Temporary parking entry deleted.");
+                }
               }
-            },
+
+              // Navigate back to the main page
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => MainPage(userId: widget.userId),
+                ),
+              );
+            } catch (e) {
+              // Handle any errors during the process
+              print("Error checking or deleting temporary parking: $e");
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error deleting temporary parking. Please try again.')),
+              );
+            }
+          },
           ),
         title: Image.asset(
           'assets/logomelaka.jpg', 
@@ -537,12 +555,12 @@ Future<void> _fetchPricing() async {
                           'price': price.toStringAsFixed(2),
                           'startTime': startDateTime.toString(),
                           'endTime': endDateTime.toString(),
+                          'status' : 'temporary',
                         });
 
                         print("Data saved successfully.");
 
                         await updateUserPurchaseCount();
-                        
                         scheduleNotification();
 
                         Navigator.push(
