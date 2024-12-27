@@ -645,7 +645,7 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
                                           ),
                                         );
                                       },
-                                    )
+                                    ),
                                   ],
                                 ),
                               ),

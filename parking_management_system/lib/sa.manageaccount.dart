@@ -18,7 +18,7 @@ import 'login.dart';
 class ManageAccountPage extends StatefulWidget {
   final String? superadminId;
   final String? adminId;
-  
+
   ManageAccountPage({required this.superadminId, required this.adminId});
 
   @override
@@ -40,11 +40,10 @@ class _ManageAccountPage extends State<ManageAccountPage> {
     _fetchSuperAdminUsername();
   }
 
-  // Fetch admin username from Firebase
+  // Fetch superadmin username from Firebase
   void _fetchSuperAdminUsername() async {
     try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('superadmin').doc(widget.superadminId).get();
+      DocumentSnapshot snapshot = await _firestore.collection('superadmin').doc(widget.superadminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['superadmin_username'];
@@ -55,27 +54,10 @@ class _ManageAccountPage extends State<ManageAccountPage> {
     }
   }
 
-  //Fetch all admin accounts from firebase
-  void _fetchAdminAccounts() async{
-    try {
-      QuerySnapshot snapshot = await _firestore.collection('admins').get();
-       setState(() {
-        adminAccounts = snapshot.docs.map((doc) {
-          var data = doc.data() as Map<String, dynamic>;
-          data['docId'] = doc.id;
-          return data;
-        }).toList();
-      });
-    } catch (e) {
-      print("Error fetching admin accounts: $e");
-    }
-  }
-
   // Fetch admin username from Firebase
   void _fetchAdminUsername() async {
     try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('admins').doc(widget.adminId).get();
+      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['admin_username'];
@@ -86,37 +68,54 @@ class _ManageAccountPage extends State<ManageAccountPage> {
     }
   }
 
+  //Fetch all admin accounts from firebase
+  void _fetchAdminAccounts() async {
+    try {
+      QuerySnapshot snapshot = await _firestore.collection('admins').get();
+      List<Map<String, dynamic>> updatedAccounts = snapshot.docs.map((doc) {
+        var data = doc.data() as Map<String, dynamic>;
+        data['docId'] = doc.id;
+        return data;
+      }).toList();
+
+      setState(() {
+        adminAccounts = updatedAccounts;
+      });
+    } catch (e) {
+      print("Error fetching admin accounts: $e");
+    }
+  }
+
   //Show Dialog to confirm Delete Account
   void _showDeleteAccountDialog(BuildContext context, int index) {
     showDialog(
-      context: context, 
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Delete Admin Account"),
-          content: Text("Are you sure want to delete this account?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              }, 
-              child: Text("Cancel"),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () {
-                _deleteAccount(adminAccounts[index]['docId'], index);
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Delete Admin Account"),
+            content: Text("Are you sure want to delete this account?"),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text("Cancel"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  _deleteAccount(adminAccounts[index]['docId'], index);
 
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text("Account deleted successfuly!")),
-                );
-              }, 
-              child: Text("Delete", style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        );
-      }
-    );
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Account deleted successfuly!")),
+                  );
+                },
+                child: Text("Delete", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        });
   }
 
   //Delete Account
@@ -127,7 +126,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
       setState(() {
         adminAccounts.removeAt(index);
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Account deleted successfully.")),
       );
@@ -139,11 +138,11 @@ class _ManageAccountPage extends State<ManageAccountPage> {
     }
   }
 
-  void _logout(BuildContext context) async{
+  void _logout(BuildContext context) async {
     try {
       // Sign out from Firebase Authentication
       await FirebaseAuth.instance.signOut();
-      
+
       // Navigate to LoginPage and replace the current page
       Navigator.pushReplacement(
         context,
@@ -156,7 +155,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
         SnackBar(content: Text('Error signing out. Please try again.')),
       );
     }
-  }  
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -166,14 +165,13 @@ class _ManageAccountPage extends State<ManageAccountPage> {
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color:  Colors.black),
-            onPressed: (){
-              Scaffold.of(context).openDrawer();
-            }
-          ),
+              icon: Icon(Icons.menu, color: Colors.black),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              }),
         ),
         title: Image.asset(
-          'assets/logomelaka.jpg', 
+          'assets/logomelaka.jpg',
           height: 60,
         ),
         centerTitle: true,
@@ -188,7 +186,10 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                   Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
-              items: <String>['Profile', 'Logout'].map((String value) {
+              items: <String>[
+                'Profile',
+                'Logout'
+              ].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -211,178 +212,171 @@ class _ManageAccountPage extends State<ManageAccountPage> {
         ],
       ),
       drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.red,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Image.asset(
-                    'assets/logomelaka.jpg',
-                    height: 60,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Melaka Parking',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                    ),
-                  ), 
-                ],
-              ),
+          child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.red,
             ),
-
-            ListTile(
-              leading: Icon(Icons.home, color: Colors.black, size: 23),
-              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Image.asset(
+                  'assets/logomelaka.jpg',
+                  height: 60,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Melaka Parking',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: Icon(Icons.home, color: Colors.black, size: 23),
+            title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.groups, color: Colors.black),
+            title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
+            onTap: () {
+              if (widget.superadminId != null && widget.superadminId!.isNotEmpty) {
                 Navigator.push(
-                  context, 
+                  context,
                   MaterialPageRoute(
-                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
                   ),
                 );
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.groups, color: Colors.black),
-              title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
-              onTap: () {
-                if(widget.superadminId != null && widget.superadminId!.isNotEmpty) {
-                  Navigator.push(
-                    context, 
-                    MaterialPageRoute(
-                      builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                    ),
-                  );
-                }
-                else{
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Access Denied: Superadmin Only!')),
-                  );
-                }
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.black, size: 23),
-              title: Text('Edit Parking Selection', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Access Denied: Superadmin Only!')),
                 );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.black, size: 23),
-              title: Text('Parking Selection History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.payment, color: Colors.black, size: 23),
-              title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-          
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.black, size: 23),
-              title: Text('Edit Packages Bought', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.black, size: 23),
-              title: Text('Packages Bought History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.payment, color: Colors.black, size: 23),
-              title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
-              title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
-              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
-              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-          ],
-        )
-      ),
+              }
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.edit, color: Colors.black, size: 23),
+            title: Text('Edit Parking Selection', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: Colors.black, size: 23),
+            title: Text('Parking Selection History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.payment, color: Colors.black, size: 23),
+            title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.edit, color: Colors.black, size: 23),
+            title: Text('Edit Packages Bought', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: Colors.black, size: 23),
+            title: Text('Packages Bought History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.payment, color: Colors.black, size: 23),
+            title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
+            title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+            title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+            title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+        ],
+      )),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -404,7 +398,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
             Expanded(
               child: ListView.builder(
                 itemCount: adminAccounts.length,
-                itemBuilder: (context, index){
+                itemBuilder: (context, index) {
                   final admin = adminAccounts[index];
 
                   return Container(
@@ -430,7 +424,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                               Spacer(),
                               IconButton(
                                 icon: Icon(Icons.delete, color: Colors.white, size: 20),
-                                onPressed: () async  {
+                                onPressed: () async {
                                   _showDeleteAccountDialog(context, index);
                                 },
                               ),
@@ -472,23 +466,23 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton(
-                    onPressed: (){
-                      Navigator.push(
-                        context, 
-                        MaterialPageRoute(builder: (context) => CreateAdminAccountPage(superadminId: '', adminId: '')),
-                      );
-                    }, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => CreateAdminAccountPage(superadminId: '', adminId: '')),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 35, vertical: 12),
                       ),
-                      padding: EdgeInsets.symmetric(horizontal: 35, vertical: 12),
-                    ),
-                    child: Text(
-                      "Create Account", 
-                      style: TextStyle(fontSize: 15, color: Colors.white),)
-                  ),
+                      child: Text(
+                        "Create Account",
+                        style: TextStyle(fontSize: 15, color: Colors.white),
+                      )),
                 ],
               ),
             ),
@@ -497,5 +491,4 @@ class _ManageAccountPage extends State<ManageAccountPage> {
       ),
     );
   }
-
 }
