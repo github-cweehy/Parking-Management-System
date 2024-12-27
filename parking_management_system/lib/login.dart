@@ -5,8 +5,10 @@ import 'mainpage.dart';
 import 'adminMainPage.dart';
 
 class LoginPage extends StatefulWidget {
+  final String? superadminId;
+  final String? adminId;
 
-  const LoginPage();
+  const LoginPage({Key? key, this.superadminId, this.adminId}): super(key: key);
   
   @override
   _LoginPageState createState() => _LoginPageState();
@@ -22,7 +24,33 @@ class _LoginPageState extends State<LoginPage> {
     String password = _passwordController.text.trim();
 
     try {
-      // Search in 'admins' collection first
+      // Search in 'superadmin' collection first
+      QuerySnapshot superadminSnapshot = await _firestore
+          .collection('superadmin')
+          .where('superadmin_username', isEqualTo: username)
+          .get();
+
+      if (superadminSnapshot.docs.isNotEmpty) {
+        var superadminDoc = superadminSnapshot.docs[0];
+        String storedPassword = superadminDoc['password'];
+        String superadminId = superadminDoc.id;
+
+        if (storedPassword == password) {
+          // Navigate to the admin page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AdminMainPage(superadminId: superadminId, adminId: null),
+            ),
+          );
+          return; // Stop further execution
+        } else {
+          _showErrorDialog('Incorrect password');
+          return;
+        }
+      }
+
+      // Search in 'admins' collection 
       QuerySnapshot adminSnapshot = await _firestore
           .collection('admins')
           .where('admin_username', isEqualTo: username)
@@ -38,7 +66,7 @@ class _LoginPageState extends State<LoginPage> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => AdminMainPage(adminId: adminId)
+              builder: (context) => AdminMainPage(superadminId: null, adminId: adminId),
             ),
           );
           return; // Stop further execution

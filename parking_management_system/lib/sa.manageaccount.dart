@@ -2,40 +2,42 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:parking_management_system/adminMainPage.dart';
-import 'package:parking_management_system/adminProfile.dart';
-import 'package:parking_management_system/sa.manageaccount.dart';
+import 'package:parking_management_system/sa.createaccount.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
+import 'adminEditParkingSelection.dart';
 import 'adminHelp.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
+import 'adminProfile.dart';
 import 'adminReward.dart';
 import 'login.dart';
 
-class EditParkingSelectionPage extends StatefulWidget {
+class ManageAccountPage extends StatefulWidget {
   final String? superadminId;
   final String? adminId;
-
-  EditParkingSelectionPage({required this.superadminId, required this.adminId});
+  
+  ManageAccountPage({required this.superadminId, required this.adminId});
 
   @override
-  _EditParkingSelectionPageState createState() => _EditParkingSelectionPageState();
+  _ManageAccountPage createState() => _ManageAccountPage();
 }
 
-class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
+class _ManageAccountPage extends State<ManageAccountPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
+  String superadmin_username = '';
 
-  List<Map<String, dynamic>> parking = [];
+  List<Map<String, dynamic>> adminAccounts = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchRatesFromFirebase();
-    _fetchSuperAdminUsername();
+    _fetchAdminAccounts();
     _fetchAdminUsername();
+    _fetchSuperAdminUsername();
   }
 
   // Fetch admin username from Firebase
@@ -50,6 +52,22 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
       }
     } catch (e) {
       print("Error fetching superadmin username: $e");
+    }
+  }
+
+  //Fetch all admin accounts from firebase
+  void _fetchAdminAccounts() async{
+    try {
+      QuerySnapshot snapshot = await _firestore.collection('admins').get();
+       setState(() {
+        adminAccounts = snapshot.docs.map((doc) {
+          var data = doc.data() as Map<String, dynamic>;
+          data['docId'] = doc.id;
+          return data;
+        }).toList();
+      });
+    } catch (e) {
+      print("Error fetching admin accounts: $e");
     }
   }
 
@@ -68,36 +86,58 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
     }
   }
 
-  // Fetch parking rates from Firebase
-  void _fetchRatesFromFirebase() async {
-  try {
-    List<Map<String, dynamic>> rates = [];
-    QuerySnapshot querySnapshot = await _firestore.collection('parkingselection').get();
+  //Show Dialog to confirm Delete Account
+  void _showDeleteAccountDialog(BuildContext context, int index) {
+    showDialog(
+      context: context, 
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Delete Admin Account"),
+          content: Text("Are you sure want to delete this account?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              }, 
+              child: Text("Cancel"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              onPressed: () {
+                _deleteAccount(adminAccounts[index]['docId'], index);
 
-    print("Query Snapshot: ${querySnapshot.docs.length} documents found");
-
-    for (String duration in ['Hourly', 'Daily', 'Weekly', 'Halfly']) {
-      DocumentSnapshot snapshot = await _firestore.collection('parkingselection').doc(duration).get();
-
-      if (snapshot.exists) {
-        print("Found data for $duration: ${snapshot.data()}");  // print each doc data
-        rates.add({
-          'duration': duration,
-          'price': snapshot['price'].toDouble(),
-          'docId': duration,
-        });
-      } else {
-        print("No data found for $duration");
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Account deleted successfuly!")),
+                );
+              }, 
+              child: Text("Delete", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
       }
-    }
-
-    setState(() {
-      parking = rates;
-    });
-  } catch (e) {
-    print("Error fetching rates: $e");
+    );
   }
-}
+
+  //Delete Account
+  void _deleteAccount(String docId, int index) async {
+    try {
+      await _firestore.collection('admins').doc(docId).delete();
+
+      setState(() {
+        adminAccounts.removeAt(index);
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Account deleted successfully.")),
+      );
+    } catch (e) {
+      print("Error deleting account: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to delete account. Please try again!")),
+      );
+    }
+  }
 
   void _logout(BuildContext context) async{
     try {
@@ -116,68 +156,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
         SnackBar(content: Text('Error signing out. Please try again.')),
       );
     }
-  } 
-
-  // Save changes to Firebase
-  void saveChanges() async {
-    try {
-      for (var rate in parking) {
-        await _firestore.collection('parkingselection').doc(rate['docId']).update({
-          'price': rate['price'],
-        });
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Prices saved successfully!')));
-    } catch (e) {
-      print("Error saving changes: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error saving changes. Please try again!")));
-    }
-  }
-
-  // Show dialog to edit price
-  void _showEditDialog(BuildContext context, int index)  {
-      TextEditingController priceController = TextEditingController(
-        text: parking[index]['price'].toStringAsFixed(2),
-    );
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Edit Price for ${parking[index]['duration']}"),
-          content: TextField(
-              controller: priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: "Enter new price",
-                border: OutlineInputBorder(),
-              ),
-            ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); 
-              },
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  // Validate the price input is valid
-                  double ? newPrice = double.tryParse(priceController.text);
-
-                  if(newPrice != null){
-                    parking[index]['price'] = newPrice;
-                  }
-                });
-                Navigator.of(context).pop(); // Close dialog
-              },
-              child: Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+  }  
 
   @override
   Widget build(BuildContext context) {
@@ -194,7 +173,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
           ),
         ),
         title: Image.asset(
-          'assets/logomelaka.jpg',
+          'assets/logomelaka.jpg', 
           height: 60,
         ),
         centerTitle: true,
@@ -202,17 +181,11 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<String>(
-              underline: SizedBox(),
+              underline: Container(),
               icon: Row(
                 children: [
-                  Text(
-                    admin_username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
+                  Text(admin_username, style: TextStyle(color: Colors.black)),
+                  Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
               items: <String>['Profile', 'Logout'].map((String value) {
@@ -226,7 +199,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId, adminId: widget.adminId),
+                      builder: (context) => AdminProfilePage(superadminId: '', adminId: ''),
                     ),
                   );
                 } else if (value == 'Logout') {
@@ -263,6 +236,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                 ],
               ),
             ),
+
             ListTile(
               leading: Icon(Icons.home, color: Colors.black, size: 23),
               title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
@@ -294,7 +268,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                   );
                 }
               },
-            ), 
+            ),
 
             ListTile(
               leading: Icon(Icons.edit, color: Colors.black, size: 23),
@@ -423,71 +397,97 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                   },
                 ),
                 SizedBox(width: 10),
-                Text("Edit Parking Selection", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text("Manage Admin Account", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
               ],
             ),
-            SizedBox(height: 8),
-
+            SizedBox(height: 1),
             Expanded(
-              child: Stack(
-                children: [
-                  Container(
+              child: ListView.builder(
+                itemCount: adminAccounts.length,
+                itemBuilder: (context, index){
+                  final admin = adminAccounts[index];
+
+                  return Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      border: Border.all(
-                        color: Colors.grey.shade400, 
-                        width: 1.0
-                      ),
-                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red, width: 1.0),
                     ),
-                    child: ListView.builder(
-                      itemCount: parking.length,
-                      padding: const EdgeInsets.all(8.0),
-                      itemBuilder: (context, index) {
-                        final rate = parking[index];
-                        return Card(
-                          color: Colors.red,
-                          margin: EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            leading: Icon(Icons.access_time, color: Colors.white),
-                            title: Text(
-                              "${rate['duration']}", 
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  "RM ", 
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                SizedBox(width: 2),
-                                SizedBox(
-                                  width: 60,
-                                  child: Text(
-                                    parking[index]['price'].toStringAsFixed(2), 
-                                    textAlign: TextAlign.right, 
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.white),
-                                  onPressed: () async {
-                                    _showEditDialog(context, index);
-                                  },
-                                ),
-                              ],
-                            ),
+                    margin: EdgeInsets.symmetric(vertical: 10),
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.person, color: Colors.white, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                admin['admin_username'] ?? 'No Username',
+                                style: TextStyle(fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                              Spacer(),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.white, size: 20),
+                                onPressed: () async  {
+                                  _showDeleteAccountDialog(context, index);
+                                },
+                              ),
+                            ],
                           ),
-                        );
-                      },
+                          SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.email, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                admin['email'] ?? 'No Email',
+                                style: TextStyle(fontSize: 14, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Icon(Icons.phone_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                admin['phone_number'] ?? 'No Phone Number',
+                                style: TextStyle(fontSize: 14, color: Colors.white),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 2),
+                        ],
+                      ),
                     ),
+                  );
+                },
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: (){
+                      Navigator.push(
+                        context, 
+                        MaterialPageRoute(builder: (context) => CreateAdminAccountPage(superadminId: '', adminId: '')),
+                      );
+                    }, 
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: EdgeInsets.symmetric(horizontal: 35, vertical: 12),
+                    ),
+                    child: Text(
+                      "Create Account", 
+                      style: TextStyle(fontSize: 15, color: Colors.white),)
                   ),
                 ],
               ),
@@ -495,28 +495,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            ElevatedButton(
-              onPressed: saveChanges,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                fixedSize: Size(100, 45),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                )
-              ),
-              child: Text(
-                'Save', 
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
+
 }

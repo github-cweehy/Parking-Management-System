@@ -1,41 +1,70 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:parking_management_system/adminMainPage.dart';
-import 'package:parking_management_system/adminProfile.dart';
+import 'package:intl/intl.dart';
 import 'package:parking_management_system/sa.manageaccount.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
-import 'adminHelp.dart';
+import 'adminEditParkingSelection.dart';
+import 'adminMainPage.dart';
 import 'adminPBHistory.dart';
 import 'adminPBTransactionHistory.dart';
 import 'adminPSHistory.dart';
 import 'adminPSTransactionHistory.dart';
+import 'adminProfile.dart';
 import 'adminReward.dart';
 import 'login.dart';
 
-class EditParkingSelectionPage extends StatefulWidget {
-  final String? superadminId;
+class UserHelpPage extends StatefulWidget {
   final String? adminId;
+  final String? superadminId;
 
-  EditParkingSelectionPage({required this.superadminId, required this.adminId});
+  UserHelpPage({required this.superadminId, required this.adminId});
 
   @override
-  _EditParkingSelectionPageState createState() => _EditParkingSelectionPageState();
+  _UserHelpPage createState() => _UserHelpPage();
 }
 
-class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
+class _UserHelpPage extends State<UserHelpPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
 
-  List<Map<String, dynamic>> parking = [];
+  List<Map<String, dynamic>> helpMessages = [];
+
+  List<Map<String, dynamic>> usersData = [];
+
+  final Map<String, String> _usernameCache = {};
+  Future<String> _fetchUsername(String userId) async{
+    if(_usernameCache.containsKey(userId)){
+      return _usernameCache[userId]!;
+    }
+
+     try{
+      DocumentSnapshot userSnapshot = await _firestore.collection('users').doc(userId).get();
+      if(userSnapshot.exists){
+        String username = userSnapshot['username'] ?? 'Unknown User';
+        setState(() {
+          _usernameCache[userId] = username;
+        });
+        
+        return username;
+      }
+      else{
+        return 'Unknown User';
+      }
+    }catch(e){
+      print('Error fetching username for userId $userId: $e');
+      return 'Unknown User';
+    }
+  }
 
   @override
   void initState() {
     super.initState();
-    _fetchRatesFromFirebase();
     _fetchSuperAdminUsername();
     _fetchAdminUsername();
+    _fetchUserData();
+    _fetchHelpMessages();
   }
 
   // Fetch admin username from Firebase
@@ -56,8 +85,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
   // Fetch admin username from Firebase
   void _fetchAdminUsername() async {
     try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('admins').doc(widget.adminId).get();
+      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['admin_username'];
@@ -68,36 +96,58 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
     }
   }
 
-  // Fetch parking rates from Firebase
-  void _fetchRatesFromFirebase() async {
-  try {
-    List<Map<String, dynamic>> rates = [];
-    QuerySnapshot querySnapshot = await _firestore.collection('parkingselection').get();
-
-    print("Query Snapshot: ${querySnapshot.docs.length} documents found");
-
-    for (String duration in ['Hourly', 'Daily', 'Weekly', 'Halfly']) {
-      DocumentSnapshot snapshot = await _firestore.collection('parkingselection').doc(duration).get();
-
-      if (snapshot.exists) {
-        print("Found data for $duration: ${snapshot.data()}");  // print each doc data
-        rates.add({
-          'duration': duration,
-          'price': snapshot['price'].toDouble(),
-          'docId': duration,
+    //Load all user data at once
+    void _fetchUserData() async {
+      try {
+        QuerySnapshot snapshot = await _firestore.collection('users').get();
+        setState(() {
+          usersData = snapshot.docs.map((doc){ 
+            return{
+              'id': doc.id, 
+              'email': doc['email'] ?? 'Unknown Email',
+            };
+          }).toList();
         });
-      } else {
-        print("No data found for $duration");
+      } catch (e) {
+        print("Error fetching user data: $e");
       }
     }
 
-    setState(() {
-      parking = rates;
-    });
-  } catch (e) {
-    print("Error fetching rates: $e");
+  //fetch Help Messages 
+  void _fetchHelpMessages() async {
+    try {
+      QuerySnapshot snapshot = await _firestore.collection('help').get();
+
+      List<Map<String, dynamic>> messages = [];
+
+      for(var doc in snapshot.docs) {
+        String userId = doc['userId']; 
+        String username = await _fetchUsername(userId);
+        String problem = doc['problem'] ?? 'No problem description';
+        Timestamp timestamp = doc['timestamp'] ?? Timestamp.now();
+        String email = usersData.firstWhere(
+          (user) => user['id'] == userId, orElse: () => {'email': 'Unknown Email'}
+        )['email'];
+
+        DateTime dateTime = timestamp.toDate().toLocal();
+        dateTime = dateTime.add(Duration(hours: 8)); 
+        String formatDate = DateFormat('dd-MM-yyyy HH:mm').format(dateTime);
+
+        messages.add({
+          'username': username,
+          'email': email,
+          'problem': problem,
+          'timestamp': formatDate,
+        });
+
+        setState(() {
+          helpMessages = messages;
+        });
+      }
+    }catch(e) {
+      print('Error fetching messages: $e');
+    }
   }
-}
 
   void _logout(BuildContext context) async{
     try {
@@ -117,67 +167,6 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
       );
     }
   } 
-
-  // Save changes to Firebase
-  void saveChanges() async {
-    try {
-      for (var rate in parking) {
-        await _firestore.collection('parkingselection').doc(rate['docId']).update({
-          'price': rate['price'],
-        });
-      }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Prices saved successfully!')));
-    } catch (e) {
-      print("Error saving changes: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error saving changes. Please try again!")));
-    }
-  }
-
-  // Show dialog to edit price
-  void _showEditDialog(BuildContext context, int index)  {
-      TextEditingController priceController = TextEditingController(
-        text: parking[index]['price'].toStringAsFixed(2),
-    );
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Edit Price for ${parking[index]['duration']}"),
-          content: TextField(
-              controller: priceController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: "Enter new price",
-                border: OutlineInputBorder(),
-              ),
-            ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); 
-              },
-              child: Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  // Validate the price input is valid
-                  double ? newPrice = double.tryParse(priceController.text);
-
-                  if(newPrice != null){
-                    parking[index]['price'] = newPrice;
-                  }
-                });
-                Navigator.of(context).pop(); // Close dialog
-              },
-              child: Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -202,17 +191,11 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: DropdownButton<String>(
-              underline: SizedBox(),
+              underline: Container(),
               icon: Row(
                 children: [
-                  Text(
-                    admin_username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
+                  Text(admin_username, style: TextStyle(color: Colors.black)),
+                  Icon(Icons.arrow_drop_down, color: Colors.black),
                 ],
               ),
               items: <String>['Profile', 'Logout'].map((String value) {
@@ -275,7 +258,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                 );
               },
             ),
-
+            
             ListTile(
               leading: Icon(Icons.groups, color: Colors.black),
               title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
@@ -294,7 +277,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                   );
                 }
               },
-            ), 
+            ),
 
             ListTile(
               leading: Icon(Icons.edit, color: Colors.black, size: 23),
@@ -410,7 +393,7 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
         )
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -422,97 +405,94 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                     Navigator.pop(context);
                   },
                 ),
-                SizedBox(width: 10),
-                Text("Edit Parking Selection", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text(
+                  "Help",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
             ),
-            SizedBox(height: 8),
-
+            SizedBox(height: 1),
+            
             Expanded(
-              child: Stack(
-                children: [
-                  Container(
+              child: ListView.builder(
+                itemCount: helpMessages.length,
+                itemBuilder: (context, index){
+                  final message = helpMessages[index];
+
+                  var username = message['username'];
+                  var problem = message['problem'];
+                  var email = message['email'];
+                  var timestamp = message['timestamp'];
+
+                  return Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      border: Border.all(
-                        color: Colors.grey.shade400, 
-                        width: 1.0
-                      ),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey, width: 1.0),
                     ),
-                    child: ListView.builder(
-                      itemCount: parking.length,
-                      padding: const EdgeInsets.all(8.0),
-                      itemBuilder: (context, index) {
-                        final rate = parking[index];
-                        return Card(
-                          color: Colors.red,
-                          margin: EdgeInsets.symmetric(vertical: 8),
-                          child: ListTile(
-                            leading: Icon(Icons.access_time, color: Colors.white),
-                            title: Text(
-                              "${rate['duration']}", 
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  "RM ", 
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                  ),
+                    margin: EdgeInsets.symmetric(vertical: 8),
+                    child: Padding(
+                      padding: EdgeInsets.all(6),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '${username} :',
+                                style: TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
                                 ),
-                                SizedBox(width: 2),
-                                SizedBox(
-                                  width: 60,
-                                  child: Text(
-                                    parking[index]['price'].toStringAsFixed(2), 
-                                    textAlign: TextAlign.right, 
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.white),
-                                  onPressed: () async {
-                                    _showEditDialog(context, index);
-                                  },
-                                ),
-                              ],
-                            ),
+                              ),
+                              Spacer(),
+                              Text(
+                                '${message['timestamp']}',
+                                style: TextStyle(fontSize: 13, color: Colors.black),
+                              ),
+                              SizedBox(height: 2),
+                            ],
                           ),
-                        );
-                      },
+                          SizedBox(height: 1),
+                          Row(
+                            children: [
+                              Text(
+                                '<${email}>',
+                                style: TextStyle(fontSize: 13, color: Colors.black),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 3),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade300,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.white),
+                                  ),
+                                  padding: EdgeInsets.all(12),
+                                  child: Text(
+                                    problem,
+                                    style: TextStyle(fontSize: 15, color: Colors.black),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 3),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            ElevatedButton(
-              onPressed: saveChanges,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                fixedSize: Size(100, 45),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                )
-              ),
-              child: Text(
-                'Save', 
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
+                  );
+                }
+              )
             ),
           ],
         ),
