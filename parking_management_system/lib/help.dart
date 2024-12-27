@@ -10,7 +10,8 @@ import 'packageshistory.dart';
 import 'rewards.dart';
 import 'userprofile.dart';
 
-class HelpPage extends StatefulWidget {
+class HelpPage extends StatefulWidget 
+{
   final String userId;
 
   HelpPage({required this.userId});
@@ -19,7 +20,8 @@ class HelpPage extends StatefulWidget {
   State<HelpPage> createState() => _HelpPageState();
 }
 
-class _HelpPageState extends State<HelpPage> {
+class _HelpPageState extends State<HelpPage> 
+{
   String username ='';
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _problemController = TextEditingController();

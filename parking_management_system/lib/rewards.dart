@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'confirmRewards.dart';
 import 'favourite.dart';
+import 'help.dart';
 import 'history.dart';
 import 'login.dart';
 import 'mainpage.dart';
@@ -149,7 +150,9 @@ class _FreeParkingRewardsPageState extends State<FreeParkingRewardsPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => MainPage(userId: widget.userId),
+                      builder: (context) => MainPage(
+                        userId: widget.userId,
+                      ),
                     ),
                   );
                 },
@@ -210,6 +213,18 @@ class _FreeParkingRewardsPageState extends State<FreeParkingRewardsPage> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.help_outline_sharp, color: Colors.red),
+                title: Text('Help Center', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => HelpPage(userId: widget.userId),
                     ),
                   );
                 },

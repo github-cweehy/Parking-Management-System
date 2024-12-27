@@ -49,31 +49,43 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
     }
   }
 
-  void calculateEndDate() {
-  int monthsToAdd;
-  switch (widget.duration) {
-    case "1-month":
-      monthsToAdd = 1;
-      break;
-    case "3-month":
-      monthsToAdd = 3;
-      break;
-    case "6-month":
-      monthsToAdd = 6;
-      break;
-    default:
-      return;  
-  }
+  void calculateEndDate() 
+  {
+    int monthsToAdd;
+    switch (widget.duration) 
+    {
+      case "1-month":
+        monthsToAdd = 1;
+        break;
+
+      case "3-month":
+        monthsToAdd = 3;
+        break;
+
+      case "6-month":
+        monthsToAdd = 6;
+        break;
+
+      case "12-month":
+        monthsToAdd = 12;
+        break;
+        
+      default:
+        return;  
+    }
 
     
-    setState(() {
-      endDate = DateTime(
+    setState(() 
+    {
+      endDate = DateTime
+      (
         startDate.year,
         startDate.month + monthsToAdd,
         startDate.day,
       );
 
-      if (endDate.month != ((startDate.month + monthsToAdd - 1) % 12 + 1)) {
+      if (endDate.month != ((startDate.month + monthsToAdd - 1) % 12 + 1)) 
+      {
         endDate = DateTime(endDate.year, endDate.month + 1, 0);
       }
     });

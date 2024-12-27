@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'favourite.dart';
+import 'help.dart';
 import 'history.dart';
 import 'packagereceipt.dart';
 import 'packages.dart';
@@ -182,13 +183,15 @@ class _PackagesHistoryPageState extends State<PackagesHistoryPage> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => MainPage(userId: widget.userId),
+                    builder: (context) => MainPage(
+                      userId: widget.userId,
+                    ),
                   ),
                 );
               },
             ),
             ListTile(
-              leading: Icon(Icons.history, color: Colors.red),
+              leading: Icon(Icons.history, color: Colors.red,),
               title: Text('Parking History', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.push(
@@ -201,7 +204,7 @@ class _PackagesHistoryPageState extends State<PackagesHistoryPage> {
             ),
             ListTile(
               leading: Icon(Icons.favorite, color: Colors.red),
-              title: Text('Favourite', style: TextStyle(color: Colors.red)),
+              title: Text('Favorite', style: TextStyle(color: Colors.red)),
               onTap: () {
                 Navigator.push(
                   context,
@@ -243,6 +246,18 @@ class _PackagesHistoryPageState extends State<PackagesHistoryPage> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => FreeParkingRewardsPage(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.help_outline_sharp, color: Colors.red),
+              title: Text('Help Center', style: TextStyle(color: Colors.red)),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HelpPage(userId: widget.userId),
                   ),
                 );
               },
