@@ -28,7 +28,6 @@ class CreateAdminAccountPage extends StatefulWidget {
 class _CreateAdminAccount extends State<CreateAdminAccountPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
-  var adminId;
 
   final _formKey = GlobalKey<FormState>();
   String? firstName;
@@ -47,18 +46,40 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
   final TextEditingController _phoneNumberController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchSuperAdminUsername();
+  }
+
   Future<void> createAdmin() async {
     if (_formKey.currentState!.validate() && isNotARobot) {
       try {
-        final QuerySnapshot emailRecord = await _firestore
-            .collection('admins')
-            .where('email', isEqualTo: email)
-            .get();
+        final QuerySnapshot userduplicateEmail = await _firestore.collection('users').where('email', isEqualTo: email).get();
 
-        if (emailRecord.docs.isNotEmpty) {
+        final QuerySnapshot adminduplicateEmail = await _firestore.collection('admins').where('email', isEqualTo: email).get();
+
+        final QuerySnapshot superadminduplicateEmail = await _firestore.collection('superadmin').where('email', isEqualTo: email).get();
+
+        if (userduplicateEmail.docs.isNotEmpty || adminduplicateEmail.docs.isNotEmpty || superadminduplicateEmail.docs.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Email already exists. Please use another email.'),
+            ),
+          );
+          return;
+        }
+
+        final QuerySnapshot userduplicatePhoneNumber = await _firestore.collection('users').where('phone_number', isEqualTo: phoneNumber).get();
+
+        final QuerySnapshot adminduplicatePhoneNumber = await _firestore.collection('admins').where('phone_number', isEqualTo: phoneNumber).get();
+
+        final QuerySnapshot superadminduplicatePhoneNumber = await _firestore.collection('superadmin').where('phone_number', isEqualTo: phoneNumber).get();
+
+        if (userduplicatePhoneNumber.docs.isNotEmpty || adminduplicatePhoneNumber.docs.isNotEmpty || superadminduplicatePhoneNumber.docs.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Phone number alaready exists. Please use another phone number.'),
             ),
           );
           return;
@@ -88,7 +109,6 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
         _emailController.clear();
         _phoneNumberController.clear();
         _passwordController.clear();
-
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -105,11 +125,10 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
     }
   }
 
-  // Fetch admin username from Firebase
+  // Fetch superadmin username from Firebase
   void _fetchSuperAdminUsername() async {
     try {
-      DocumentSnapshot snapshot =
-          await _firestore.collection('superadmin').doc(widget.superadminId).get();
+      DocumentSnapshot snapshot = await _firestore.collection('superadmin').doc(widget.superadminId).get();
       if (snapshot.exists && snapshot.data() != null) {
         setState(() {
           admin_username = snapshot['superadmin_username'];
@@ -147,11 +166,10 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color:  Colors.black),
-            onPressed: (){
-              Scaffold.of(context).openDrawer();
-            }
-          ),
+              icon: Icon(Icons.menu, color: Colors.black),
+              onPressed: () {
+                Scaffold.of(context).openDrawer();
+              }),
         ),
         title: Image.asset(
           'assets/logomelaka.jpg',
@@ -175,7 +193,10 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                   ),
                 ],
               ),
-              items: <String>['Profile', 'Logout'].map((String value) {
+              items: <String>[
+                'Profile',
+                'Logout'
+              ].map((String value) {
                 return DropdownMenuItem<String>(
                   value: value,
                   child: Text(value),
@@ -198,210 +219,209 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
         ],
       ),
       drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.red,
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Image.asset(
-                    'assets/logomelaka.jpg',
-                    height: 60,
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Melaka Parking',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                    ),
-                  ), 
-                ],
-              ),
+          child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Colors.red,
             ),
-            ListTile(
-              leading: Icon(Icons.home, color: Colors.black, size: 23),
-              title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Image.asset(
+                  'assets/logomelaka.jpg',
+                  height: 60,
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Melaka Parking',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
                   ),
-                );
-              },
+                ),
+              ],
             ),
-            if(widget.superadminId.isNotEmpty)
+          ),
+          ListTile(
+            leading: Icon(Icons.home, color: Colors.black, size: 23),
+            title: Text('Home Page', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          if (widget.superadminId.isNotEmpty)
             ListTile(
               leading: Icon(Icons.groups, color: Colors.black),
               title: Text('Manage Admin Account', style: TextStyle(color: Colors.black)),
               onTap: () {
                 Navigator.push(
-                  context, 
+                  context,
                   MaterialPageRoute(
-                    builder: (context) => ManageAccountPage(superadminId: widget.superadminId, adminId: widget.adminId,),
-                  ),
-                );
-              },
-            ), 
-
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.black, size: 23),
-              title: Text('Edit Parking Selection', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                    builder: (context) => ManageAccountPage(
+                      superadminId: widget.superadminId,
+                      adminId: widget.adminId,
+                    ),
                   ),
                 );
               },
             ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.black, size: 23),
-              title: Text('Parking Selection History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+          ListTile(
+            leading: Icon(Icons.edit, color: Colors.black, size: 23),
+            title: Text('Edit Parking Selection', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: Colors.black, size: 23),
+            title: Text('Parking Selection History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.payment, color: Colors.black, size: 23),
+            title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.edit, color: Colors.black, size: 23),
+            title: Text('Edit Packages Bought', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.history, color: Colors.black, size: 23),
+            title: Text('Packages Bought History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.payment, color: Colors.black, size: 23),
+            title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
+            title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
+            title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+            title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
+            title: Text('Create', style: TextStyle(color: Colors.black, fontSize: 16)),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CreateAdminAccountPage(
+                    superadminId: widget.superadminId,
+                    adminId: widget.adminId,
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.payment, color: Colors.black, size: 23),
-              title: Text('Parking Selection Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-          
-            ListTile(
-              leading: Icon(Icons.edit, color: Colors.black, size: 23),
-              title: Text('Edit Packages Bought', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.history, color: Colors.black, size: 23),
-              title: Text('Packages Bought History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.payment, color: Colors.black, size: 23),
-              title: Text('Packages Bought Transaction History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.menu_open, color: Colors.black, size: 23),
-              title: Text('User Data List', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => CustomerListPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.celebration_rounded, color: Colors.black, size: 23),
-              title: Text('Reward History', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => RewardHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
-              title: Text('Help Center', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => UserHelpPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                  ),
-                );
-              },
-            ),
-
-            ListTile(
-              leading: Icon(Icons.help_outline_sharp, color: Colors.black, size: 23),
-              title: Text('Create', style: TextStyle(color: Colors.black, fontSize: 16)),
-              onTap: () {
-                Navigator.push(
-                  context, 
-                  MaterialPageRoute(
-                    builder: (context) => CreateAdminAccountPage(superadminId: widget.superadminId, adminId: widget.adminId,),
-                  ),
-                );
-              },
-            ),
-          ],
-        )
-      ),
+                ),
+              );
+            },
+          ),
+        ],
+      )),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back_ios, color: Colors.black),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                Text(
-                  "Create Admin Account", 
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 15),
-
-            Expanded(
-              child: ListView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back_ios, color: Colors.black),
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  Text(
+                    "Create Admin Account",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 15),
+              Expanded(
+                child: ListView(children: [
                   Form(
                     key: _formKey,
                     child: Column(
@@ -427,7 +447,6 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                           },
                         ),
                         const SizedBox(height: 20),
-
                         TextFormField(
                           onChanged: (value) => firstName = value,
                           controller: _firstNameController,
@@ -440,12 +459,9 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter first name'
-                            : null,
+                          validator: (value) => value == null || value.isEmpty ? 'Please enter first name' : null,
                         ),
                         const SizedBox(height: 20),
-
                         TextFormField(
                           onChanged: (value) => lastName = value,
                           controller: _lastNameController,
@@ -458,12 +474,9 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) => value == null || value.isEmpty
-                            ? 'Please enter last name'
-                            : null,
+                          validator: (value) => value == null || value.isEmpty ? 'Please enter last name' : null,
                         ),
                         const SizedBox(height: 20),
-
                         TextFormField(
                           onChanged: (value) => email = value,
                           controller: _emailController,
@@ -487,7 +500,6 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                           },
                         ),
                         const SizedBox(height: 20),
-
                         TextFormField(
                           onChanged: (value) => phoneNumber = value,
                           controller: _phoneNumberController,
@@ -508,7 +520,6 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                           },
                         ),
                         const SizedBox(height: 20),
-
                         TextFormField(
                           obscureText: !_isPasswordVisible,
                           controller: _passwordController,
@@ -523,28 +534,22 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                             ),
                             suffixIcon: IconButton(
                               icon: Icon(
-                                _isPasswordVisible
-                                    ? Icons.visibility
-                                    : Icons.visibility_off,
+                                _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
                               ),
                               onPressed: () => setState(
                                 () => _isPasswordVisible = !_isPasswordVisible,
                               ),
                             ),
                           ),
-                          validator: (value) => value == null || value.length < 10
-                              ? 'Password must be at least 10 characters'
-                              : null,
+                          validator: (value) => value == null || value.length < 10 ? 'Password must be at least 10 characters' : null,
                         ),
                         SizedBox(height: 60),
-
                         CheckboxListTile(
                           value: isNotARobot,
                           onChanged: (value) => setState(() => isNotARobot = value!),
                           title: const Text('I am not a robot'),
                         ),
                         SizedBox(height: 10),
-
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
@@ -565,12 +570,10 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                       ],
                     ),
                   ),
-                ] 
+                ]),
               ),
-            ),
-          ],
-        )
-      ),
+            ],
+          )),
     );
   }
 }
