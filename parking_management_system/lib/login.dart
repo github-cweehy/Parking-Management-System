@@ -18,6 +18,7 @@ class _LoginPageState extends State<LoginPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool isPasswordVisible = false;
 
   Future<void> _login() async {
     String username = _usernameController.text.trim();
@@ -141,10 +142,23 @@ class _LoginPageState extends State<LoginPage> {
 
                 TextFormField(
                   controller: newPasswordController,
-                  obscureText: true,
+                  obscureText: isPasswordVisible,
                   decoration: InputDecoration(
                     labelText: 'New Password',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: (){
+                        setState(() {
+                          isPasswordVisible = !isPasswordVisible;
+                        });
+                      },
+                    )
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -337,7 +351,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 20),
                 TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: !isPasswordVisible,
                   decoration: InputDecoration(
                     labelText: 'Password',
                     filled: true,
@@ -345,6 +359,16 @@ class _LoginPageState extends State<LoginPage> {
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
                       borderSide: BorderSide.none,
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: (){
+                        setState(() {
+                          isPasswordVisible = !isPasswordVisible;
+                        });
+                      },
                     ),
                   ),
                 ),
