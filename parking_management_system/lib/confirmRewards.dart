@@ -189,33 +189,56 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
   }
 
   Future<void> _saveParkingHistory(BuildContext context) async {
+    if (selectedPlate.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please select a vehicle plate.')),
+      );
+      return;
+    }
+
     try {
+      // Check if reward is already used
+      DocumentSnapshot rewardDoc = await FirebaseFirestore.instance
+          .collection('rewards')
+          .doc(widget.rewardId)
+          .get();
+
+      if (rewardDoc.exists) {
+        Map<String, dynamic>? rewardData = rewardDoc.data() as Map<String, dynamic>?;
+        if (rewardData != null && rewardData['isUsed'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('This reward has already been used.')),
+          );
+          return;
+        }
+      }
+
       // Check for active packages
       final activePackagesQuery = await FirebaseFirestore.instance
-          .collection('packages_bought') 
+          .collection('packages_bought')
           .where('vehiclePlateNum', isEqualTo: selectedPlate)
-          .where('endTime', isGreaterThan: DateTime.now()) 
+          .where('endTime', isGreaterThan: Timestamp.fromDate(DateTime.now()))
           .get();
 
       // Check for active parking history
       final activeParkingQuery = await FirebaseFirestore.instance
           .collection('history parking')
           .where('vehiclePlateNum', isEqualTo: selectedPlate)
-          .where('endTime', isGreaterThan: DateTime.now()) 
+          .where('endTime', isGreaterThan: Timestamp.fromDate(DateTime.now()))
           .get();
-      
-      // If there are active packages or active parking history, show a message
+
       if (activePackagesQuery.docs.isNotEmpty || activeParkingQuery.docs.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('This vehicle plate number is currently in parking. Please select another.')),
+          SnackBar(content: Text('This vehicle plate is currently in parking. Please select another.')),
         );
-        return; 
+        return;
       }
 
+      // Add parking record
       DocumentReference parkingDocRef = await FirebaseFirestore.instance.collection('history parking').add({
         'userID': widget.userId,
-        'startTime': widget.startDateTime,
-        'endTime': widget.endDateTime,
+        'startTime': Timestamp.fromDate(widget.startDateTime),
+        'endTime': Timestamp.fromDate(widget.endDateTime),
         'isUsedByVoucher': true,
         'rewardId': widget.rewardId,
         'location': "All Melaka Area",
@@ -223,10 +246,11 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
         'vehiclePlateNum': selectedPlate,
       });
 
+      // Update reward to mark as used
       await FirebaseFirestore.instance
-        .collection('rewards')
-        .doc(widget.rewardId)
-        .update({
+          .collection('rewards')
+          .doc(widget.rewardId)
+          .update({
         'isUsed': true,
       });
 
@@ -234,7 +258,7 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
         SnackBar(content: Text('Parking added successfully!')),
       );
 
-      // Navigate back to the main page
+      // Navigate back to main page
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -242,7 +266,7 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
         ),
       );
     } catch (e) {
-      print("Error saving parking history: $e");
+      print("Error saving parking history: $e"); // Logs the error to the console
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving parking history. Please try again.')),
       );

@@ -216,6 +216,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   
                   await docRef.update({
                     'payment method': 'Card Payment',
+                    'status': 'confirmed',
                   });
                   print("Data saved successfully.");
 
@@ -277,6 +278,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
 
                   await docRef.update({
                     'payment method': 'Online Banking',
+                    'status': 'confirmed',
                   });
                   print("Data saved successfully.");
 
@@ -338,6 +340,7 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
                   
                   await docRef.update({
                     'payment method': 'E-wallet',
+                    'status': 'confirmed',
                   });
                   print("Data saved successfully.");
 

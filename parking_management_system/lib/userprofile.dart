@@ -140,6 +140,8 @@ class _UserProfilePageState extends State<UserProfilePage> {
                         userData?['first_name'] = newValue;
                       } else if (field == 'last_name') {
                         userData?['last_name'] = newValue;
+                      } else if (field == 'phone_number'){
+                        userData?['phone_number'] = newValue;
                       }
                     });
                     Navigator.of(context).pop();
@@ -254,6 +256,7 @@ void _setDefaultVehicle(String registrationNumber) async {
     TextEditingController currentPasswordController = TextEditingController();
     TextEditingController newPasswordController = TextEditingController();
     final formKey = GlobalKey<FormState>();
+    bool isNewPasswordVisible = false;
 
     showDialog(
       context: context, 
@@ -283,7 +286,7 @@ void _setDefaultVehicle(String registrationNumber) async {
 
                 TextFormField(
                   controller: newPasswordController,
-                  obscureText: true,
+                  obscureText: !isNewPasswordVisible,
                   decoration: InputDecoration(
                     labelText: 'New Password',
                     border: OutlineInputBorder(),
@@ -583,7 +586,7 @@ void _setDefaultVehicle(String registrationNumber) async {
 
                         // Phone Number
                         _buildEditableTextField('Phone Number', userData?['phone_number'], () {
-                          _edit('phone_number', userData?['phone_numebr'] ?? '');
+                          _edit('phone_number', userData?['phone_number'] ?? '');
                         }),                        
                         const SizedBox(height: 20),
 
