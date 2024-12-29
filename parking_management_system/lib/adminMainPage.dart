@@ -28,11 +28,16 @@ class _AdminMainPageState extends State<AdminMainPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
 
+  double totalSales = 0;
+  double totalParkingTransactions = 0;
+  double totalPackagesTransactions = 0;
+
   @override
   void initState() {
     super.initState();
     _fetchAdminUsername();
     _fetchSuperAdminUsername();
+    _fetchTransactionsData();
   }
 
   // Fetch superadmin username from Firebase
@@ -45,11 +50,14 @@ class _AdminMainPageState extends State<AdminMainPage> {
         });
       }
     } catch (e) {
-      print("Error fetching superadmin username: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching data: $e')),
+      );
     }
   }
 
-  Future<void> _fetchAdminUsername() async {
+  // Fetch admin username from Firebase
+  void _fetchAdminUsername() async {
     try {
       final adminDoc = await FirebaseFirestore.instance.collection('admins').doc(widget.adminId).get();
 
@@ -57,13 +65,51 @@ class _AdminMainPageState extends State<AdminMainPage> {
         admin_username = adminDoc.data()?['admin_username'] ?? 'Admin Username';
       });
     } catch (e) {
-      print("Error fetching admin username: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching data: $e')),
+      );
+    }
+  }
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading admin data. Please try again.')),
-        );
+  //fetch sales form firebase
+  void _fetchTransactionsData() async {
+    try {
+      QuerySnapshot transactionsSnapshot = await _firestore.collection('transactions').get();
+
+      double sales = 0;
+      double parkingProfit = 0;
+      double packagesProfit = 0;
+      int totalSalesCount = 0;
+
+      for (var doc in transactionsSnapshot.docs) {
+        Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+        double amount = data['amount'] ?? 0.0;
+
+        String? parking = data['parking'];
+        String? packages = data['packages'];
+
+        sales += amount;
+        totalSalesCount++;
+
+        if (parking != null) {
+          parkingProfit += amount;
+        }
+
+        if (packages != null) {
+          packagesProfit += amount;
+        }
+      }
+
+      setState(() {
+        totalSales = sales;
+        totalParkingTransactions = parkingProfit;
+        totalPackagesTransactions = packagesProfit;
       });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching sales data: $e')),
+      );
     }
   }
 
@@ -315,153 +361,139 @@ class _AdminMainPageState extends State<AdminMainPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Parking Selection
-            CustomCard(
-              title: 'Parking Selection',
-              options: [
-                OptionItem(
-                  icon: Icons.edit,
-                  text: 'Edit Parking Selection',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditParkingSelectionPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                      ),
-                    );
-                  },
+            SizedBox(
+              width: 500,
+              child: Card(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: Colors.grey.shade400, width: 1.0),
                 ),
-                OptionItem(
-                  icon: Icons.history,
-                  text: 'Parking Selection History',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ParkingSelectionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Total Sales',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
                       ),
-                    );
-                  },
-                ),
-                OptionItem(
-                  icon: Icons.payment,
-                  text: 'Transaction History',
-                  onTap: () {
-                    // Handle Payment History tap
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ParkingSelectionTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                      SizedBox(height: 6),
+                      Text(
+                        'RM ${totalSales.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.green),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-            SizedBox(height: 20),
-
-            // Packages Bought
-            CustomCard(
-              title: 'Packages Bought',
-              options: [
-                OptionItem(
-                  icon: Icons.edit,
-                  text: 'Edit Packages Bought',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditPackagesBoughtPage(superadminId: widget.superadminId, adminId: widget.adminId),
+            SizedBox(height: 18),
+            Card(
+              color: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: Colors.red, width: 1.0),
+              ),
+              child: Container(
+                width: 500,
+                height: 120,
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Parking',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
-                    );
-                  },
-                ),
-                OptionItem(
-                  icon: Icons.history,
-                  text: 'Packages Bought History',
-                  onTap: () {
-                    // Handle Packages Bought History tap
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PackagesBoughtHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                      SizedBox(height: 8),
+                      Text(
+                        'Profit : RM ${totalParkingTransactions.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
-                    );
-                  },
-                ),
-                OptionItem(
-                  icon: Icons.payment,
-                  text: 'Transaction History',
-                  onTap: () {
-                    // Handle Payment History tap
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PackagesBoughtTransactionHistoryPage(superadminId: widget.superadminId, adminId: widget.adminId),
+                      SizedBox(height: 2),
+                      Text(
+                        'Sales :',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
-              ],
+              ),
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 10),
+            Card(
+              color: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: Colors.red, width: 1.0),
+              ),
+              child: Container(
+                width: 500,
+                height: 120,
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Packages',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Profit : RM ${totalPackagesTransactions.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Sales : ',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+            Card(
+              color: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+                side: BorderSide(color: Colors.red, width: 1.0),
+              ),
+              child: Container(
+                width: 500,
+                height: 120,
+                child: Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Reward Voucher',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Amount : RM ',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Units : ',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class CustomCard extends StatelessWidget {
-  final String title;
-  final List<OptionItem> options;
-
-  CustomCard({required this.title, required this.options});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.grey.shade400,
-          width: 1,
-        ),
-      ),
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 12),
-          Column(
-            children: options,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class OptionItem extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final VoidCallback onTap;
-
-  OptionItem({required this.icon, required this.text, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(text),
       ),
     );
   }
