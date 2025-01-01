@@ -31,6 +31,10 @@ class _AdminMainPageState extends State<AdminMainPage> {
   double totalSales = 0;
   double totalParkingTransactions = 0;
   double totalPackagesTransactions = 0;
+  int totalParkingCount = 0;
+  int totalPackagesCount = 0;
+  int totalRewardCount = 0;
+  double totalRewardAmount = 0;
 
   @override
   void initState() {
@@ -75,36 +79,56 @@ class _AdminMainPageState extends State<AdminMainPage> {
   void _fetchTransactionsData() async {
     try {
       QuerySnapshot transactionsSnapshot = await _firestore.collection('transactions').get();
+      QuerySnapshot rewardSnapshot = await _firestore.collection('history parking').get();
 
       double sales = 0;
       double parkingProfit = 0;
       double packagesProfit = 0;
-      int totalSalesCount = 0;
+      double rewardAmount = 0;
+      const double rewardPrice = 5.0;
+      int parkingCount = 0;
+      int packagesCount = 0;
+      int rewardCount = 0;
 
       for (var doc in transactionsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
         double amount = data['amount'] ?? 0.0;
-
         String? parking = data['parking'];
         String? packages = data['packages'];
 
         sales += amount;
-        totalSalesCount++;
 
         if (parking != null) {
           parkingProfit += amount;
+          parkingCount++;
         }
 
         if (packages != null) {
           packagesProfit += amount;
+          packagesCount++;
         }
       }
+
+      for (var doc in rewardSnapshot.docs) {
+        Map<String, dynamic> reward = doc.data() as Map<String, dynamic>;
+        bool isUsed = reward['isUsedByVoucher'] ?? false;
+
+        if (isUsed) {
+          rewardCount++;
+        }
+      }
+
+      rewardAmount = rewardCount * rewardPrice;
 
       setState(() {
         totalSales = sales;
         totalParkingTransactions = parkingProfit;
         totalPackagesTransactions = packagesProfit;
+        totalParkingCount = parkingCount;
+        totalPackagesCount = packagesCount;
+        totalRewardCount = rewardCount;
+        totalRewardAmount = rewardAmount;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -361,8 +385,21 @@ class _AdminMainPageState extends State<AdminMainPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.calendar_today, color: Colors.grey, size: 19),
+                  onPressed: () {
+                    //
+                  },
+                ),
+                SizedBox(width: 5),
+              ],
+            ),
+            SizedBox(height: 6),
             SizedBox(
               width: 500,
               child: Card(
@@ -415,7 +452,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Sales :',
+                        'Sales : $totalParkingCount',
                         style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ],
@@ -449,7 +486,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Sales : ',
+                        'Sales : $totalPackagesCount',
                         style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ],
@@ -478,12 +515,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
                       ),
                       SizedBox(height: 8),
                       Text(
-                        'Amount : RM ',
+                        'Amount : RM ${totalRewardAmount.toStringAsFixed(2)}',
                         style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                       SizedBox(height: 2),
                       Text(
-                        'Units : ',
+                        'Units : $totalRewardCount',
                         style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ],
