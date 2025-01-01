@@ -114,7 +114,8 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
   Stream<QuerySnapshot> getFilteredData() {
     if (startTimestamp != null && endTimestamp != null) {
       return _firestore.collection('transactions').where('timestamp', isGreaterThanOrEqualTo: startTimestamp).where('timestamp', isLessThanOrEqualTo: endTimestamp).snapshots();
-    } else {
+    } 
+    else {
       return _firestore.collection('transactions').snapshots();
     }
   }

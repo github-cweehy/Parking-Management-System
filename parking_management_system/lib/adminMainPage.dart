@@ -36,6 +36,10 @@ class _AdminMainPageState extends State<AdminMainPage> {
   int totalRewardCount = 0;
   double totalRewardAmount = 0;
 
+  DateTime? selectedDate;
+  DateTime startDate = DateTime.now();
+  DateTime endDate = DateTime.now();
+
   @override
   void initState() {
     super.initState();
@@ -75,11 +79,85 @@ class _AdminMainPageState extends State<AdminMainPage> {
     }
   }
 
+  Stream<QuerySnapshot> getFilteredData() {
+    if (startDate != null && endDate != null) {
+      return _firestore
+        .collection('transactions')
+        .where('timestamp', isGreaterThanOrEqualTo: startDate)
+        .where('timestamp', isLessThanOrEqualTo: endDate)
+        .snapshots();
+    } 
+    else {
+      return _firestore.collection('transactions').snapshots();
+    }
+  }
+
+  //selected date
+  void _selectDate(BuildContext context) async {
+    List<DateTime> availableDates = await getAvailableDates();
+
+    if (availableDates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("No available dates to select.")),
+      );
+
+      return;
+    }
+
+    DateTime minDate = availableDates.reduce((a, b) => a.isBefore(b) ? a : b);
+    DateTime maxDate = availableDates.reduce((a, b) => a.isAfter(b) ? a : b);
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: availableDates.first,
+      firstDate: minDate,
+      lastDate: maxDate,
+      selectableDayPredicate: (date) {
+        return availableDates.contains(DateTime(date.year, date.month, date.day));
+      },
+    );
+
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        if (startDate.isBefore(picked)) {
+        endDate = picked;
+        } 
+        else {
+          startDate = picked;
+        }
+      });
+
+      _fetchTransactionsData();
+    }
+  }
+
+  Future<List<DateTime>> getAvailableDates() async {
+    try {
+      QuerySnapshot snapshot = await _firestore.collection('transactions').get();
+
+      List<DateTime> availableDates = snapshot.docs.map((doc) {
+        Timestamp timestamp = doc['timestamp'];
+        return DateTime(timestamp.toDate().year, timestamp.toDate().month, timestamp.toDate().day);
+      }).toList();
+
+      // prevent duplicate date
+      return availableDates.toSet().toList();
+    } catch (e) {
+      print("Error fetching available dates: $e");
+      return [];
+    }
+  }
+
   //fetch sales form firebase
   void _fetchTransactionsData() async {
     try {
-      QuerySnapshot transactionsSnapshot = await _firestore.collection('transactions').get();
-      QuerySnapshot rewardSnapshot = await _firestore.collection('history parking').get();
+      QuerySnapshot transactionsSnapshot = await _firestore
+        .collection('transactions')
+        .get();
+
+      QuerySnapshot rewardSnapshot = await _firestore
+        .collection('history parking')
+        .get();
 
       double sales = 0;
       double parkingProfit = 0;
@@ -385,20 +463,83 @@ class _AdminMainPageState extends State<AdminMainPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween, 
               children: [
-                IconButton(
-                  icon: Icon(Icons.calendar_today, color: Colors.grey, size: 19),
-                  onPressed: () {
-                    //
-                  },
-                ),
-                SizedBox(width: 5),
-              ],
-            ),
+              //Start Date
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(left: 10.0),
+                    child: Text("Start Date", style: TextStyle(fontSize: 13)),
+                  ),
+                  GestureDetector(
+                    onTap: () => _selectDate(context),
+                    child: Container(
+                      width: 185,
+                      height: 40,
+                      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_month, color: Colors.grey, size: 20),
+                          SizedBox(width: 5),
+                          //Text
+                          Text(
+                              "${startDate.day} ${_monthName(startDate.month)} ${startDate.year}",
+                              style: TextStyle(color: Colors.black, fontSize: 13.5),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              //End Date
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.only(left: 10.0),
+                    child: Text("End Date", style: TextStyle(fontSize: 13)),
+                  ),
+                  GestureDetector(
+                    onTap: () => _selectDate(context),
+                    child: Container(
+                      width: 185,
+                      height: 40,
+                      padding: EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.calendar_month, color: Colors.grey, size: 20),
+                          SizedBox(width: 5),
+                          //Text
+                          Text(
+                              "${endDate.day} ${_monthName(endDate.month)} ${endDate.year}",
+                              style: TextStyle(color: Colors.black, fontSize: 13.5),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ]),
             SizedBox(height: 6),
             SizedBox(
               width: 500,
@@ -533,5 +674,23 @@ class _AdminMainPageState extends State<AdminMainPage> {
         ),
       ),
     );
+  }
+
+  String _monthName(int month) {
+    const monthNames = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    return monthNames[month - 1];
   }
 }
