@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_chart_plus/flutter_chart.dart';
 import 'package:parking_management_system/adminCustomerList.dart';
 import 'package:parking_management_system/adminHelp.dart';
 import 'package:parking_management_system/adminPBHistory.dart';
@@ -33,12 +34,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
   double totalPackagesTransactions = 0;
   int totalParkingCount = 0;
   int totalPackagesCount = 0;
-  int totalRewardCount = 0;
-  double totalRewardAmount = 0;
 
   DateTime? selectedDate;
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
+
+  Map<DateTime, double> dailyProfit = {};
 
   @override
   void initState() {
@@ -79,6 +80,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
     }
   }
 
+  //get filter data
   Stream<QuerySnapshot> getFilteredData() {
     if (startDate != null && endDate != null) {
       return _firestore
@@ -93,7 +95,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
   }
 
   //selected date
-  void _selectDate(BuildContext context) async {
+  void _selectDate(BuildContext context, bool isStartDate) async {
     List<DateTime> availableDates = await getAvailableDates();
 
     if (availableDates.isEmpty) {
@@ -109,7 +111,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
 
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: availableDates.first,
+      initialDate:  availableDates.first,
       firstDate: minDate,
       lastDate: maxDate,
       selectableDayPredicate: (date) {
@@ -117,13 +119,21 @@ class _AdminMainPageState extends State<AdminMainPage> {
       },
     );
 
-    if (picked != null && picked != selectedDate) {
+    if (picked != null) {
       setState(() {
-        if (startDate.isBefore(picked)) {
-        endDate = picked;
-        } 
-        else {
+        if(isStartDate) {
           startDate = picked;
+
+          if(endDate.isBefore(startDate)) {
+            endDate = startDate;
+          }
+        }
+        else{
+          endDate = picked;
+
+          if(startDate.isAfter(endDate)) {
+            startDate = endDate;
+          }
         }
       });
 
@@ -153,20 +163,17 @@ class _AdminMainPageState extends State<AdminMainPage> {
     try {
       QuerySnapshot transactionsSnapshot = await _firestore
         .collection('transactions')
-        .get();
-
-      QuerySnapshot rewardSnapshot = await _firestore
-        .collection('history parking')
+        .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+        .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
         .get();
 
       double sales = 0;
       double parkingProfit = 0;
       double packagesProfit = 0;
-      double rewardAmount = 0;
-      const double rewardPrice = 5.0;
       int parkingCount = 0;
       int packagesCount = 0;
-      int rewardCount = 0;
+
+      Map<DateTime, double> tempDailyProfit = {};
 
       for (var doc in transactionsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -174,6 +181,9 @@ class _AdminMainPageState extends State<AdminMainPage> {
         double amount = data['amount'] ?? 0.0;
         String? parking = data['parking'];
         String? packages = data['packages'];
+        DateTime date = (data['timestamp'] as Timestamp).toDate();
+        DateTime dateKey = DateTime(date.year, date.month, date.day);
+
 
         sales += amount;
 
@@ -186,18 +196,9 @@ class _AdminMainPageState extends State<AdminMainPage> {
           packagesProfit += amount;
           packagesCount++;
         }
+
+        tempDailyProfit.update(dateKey, (value) => value + amount, ifAbsent: () => amount);
       }
-
-      for (var doc in rewardSnapshot.docs) {
-        Map<String, dynamic> reward = doc.data() as Map<String, dynamic>;
-        bool isUsed = reward['isUsedByVoucher'] ?? false;
-
-        if (isUsed) {
-          rewardCount++;
-        }
-      }
-
-      rewardAmount = rewardCount * rewardPrice;
 
       setState(() {
         totalSales = sales;
@@ -205,8 +206,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
         totalPackagesTransactions = packagesProfit;
         totalParkingCount = parkingCount;
         totalPackagesCount = packagesCount;
-        totalRewardCount = rewardCount;
-        totalRewardAmount = rewardAmount;
+        dailyProfit = tempDailyProfit;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -477,7 +477,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     child: Text("Start Date", style: TextStyle(fontSize: 13)),
                   ),
                   GestureDetector(
-                    onTap: () => _selectDate(context),
+                    onTap: () => _selectDate(context, true),
                     child: Container(
                       width: 185,
                       height: 40,
@@ -513,7 +513,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                     child: Text("End Date", style: TextStyle(fontSize: 13)),
                   ),
                   GestureDetector(
-                    onTap: () => _selectDate(context),
+                    onTap: () => _selectDate(context, false),
                     child: Container(
                       width: 185,
                       height: 40,
@@ -568,6 +568,25 @@ class _AdminMainPageState extends State<AdminMainPage> {
               ),
             ),
             SizedBox(height: 18),
+
+            //Bar Chart
+            Container(
+              height: 300, 
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: BarChart(
+                data: dailyProfit.entries.map((entry) {
+                  return BarChartData(
+                    x: entry.key,
+                    y: entry.value,
+                  );
+                }).toList(),
+                barWidth: 12,
+                xAxisLabel: 'Date',
+                yAxisLabel: 'Profit (RM)',
+              ),
+            ),
+            SizedBox(height: 6),
+            
             Card(
               color: Colors.red,
               shape: RoundedRectangleBorder(
@@ -636,40 +655,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
               ),
             ),
             SizedBox(height: 10),
-            Card(
-              color: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: Colors.red, width: 1.0),
-              ),
-              child: Container(
-                width: 500,
-                height: 120,
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Reward Voucher',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Amount : RM ${totalRewardAmount.toStringAsFixed(2)}',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        'Units : $totalRewardCount',
-                        style: TextStyle(fontSize: 16, color: Colors.white),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 10),
           ],
         ),
       ),
@@ -694,3 +679,4 @@ class _AdminMainPageState extends State<AdminMainPage> {
     return monthNames[month - 1];
   }
 }
+
