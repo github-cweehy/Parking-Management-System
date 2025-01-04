@@ -28,7 +28,6 @@ class ManageAccountPage extends StatefulWidget {
 class _ManageAccountPage extends State<ManageAccountPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
-  String superadmin_username = '';
 
   List<Map<String, dynamic>> adminAccounts = [];
 
