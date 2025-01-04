@@ -83,7 +83,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
           adminPhoneNumber = data['phone_number'] ?? '';
           adminFirstName = data['first_name'] ?? '';
           adminLastName = data['last_name'] ?? '';
-          adminProfilePicture = data['profile_picture'] ?? ''; // Use empty string if null
+          adminProfilePicture = data['admin_profilePicture'] ?? ''; // Use empty string if null
         });
       }
     } catch (e) {
@@ -189,7 +189,8 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
         await FirebaseFirestore.instance.collection('superadmin').doc(widget.superadminId).update({
           'password': newPassword
         });
-      } else {
+      } 
+      else {
         await FirebaseFirestore.instance.collection('admins').doc(widget.adminId).update({
           'password': newPassword
         });
