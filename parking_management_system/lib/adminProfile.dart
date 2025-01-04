@@ -106,11 +106,17 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
     try {
       String fileName = path.basename(image.path);
 
-      final String pathPrefix = (widget.superadminId != null && widget.superadminId!.isNotEmpty) ? 'superadmin_profilePicture' : 'admin_profilePicture';
+      final String pathPrefix = (widget.superadminId != null && widget.superadminId!.isNotEmpty) 
+        ? 'superadmin_profilePicture' 
+        : 'admin_profilePicture';
 
-      final String userId = (widget.superadminId != null && widget.superadminId!.isNotEmpty) ? widget.superadminId! : widget.adminId!;
+      final String userId = (widget.superadminId != null && widget.superadminId!.isNotEmpty) 
+        ? widget.superadminId! 
+        : widget.adminId!;
 
-      final Reference storageRef = FirebaseStorage.instance.ref().child('$pathPrefix/$userId/$fileName');
+      final Reference storageRef = FirebaseStorage.instance
+        .ref()
+        .child('$pathPrefix/$userId/$fileName');
 
       //upload picture
       UploadTask uploadTask = storageRef.putFile(File(image.path));

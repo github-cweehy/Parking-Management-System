@@ -222,7 +222,6 @@ class _UserHelpPage extends State<UserHelpPage> {
         )['email'];
 
         DateTime dateTime = timestamp.toDate().toLocal();
-        dateTime = dateTime.add(Duration(hours: 8)); 
         String formatDate = DateFormat('dd-MM-yyyy HH:mm').format(dateTime);
 
         messages.add({
@@ -621,7 +620,7 @@ class _UserHelpPage extends State<UserHelpPage> {
                               ),
                               Spacer(),
                               Text(
-                                '${message['timestamp']}',
+                                timestamp,
                                 style: TextStyle(fontSize: 13, color: Colors.white),
                               ),
                               SizedBox(height: 2),

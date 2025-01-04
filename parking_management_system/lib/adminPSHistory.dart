@@ -615,7 +615,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                                           startTime = (record['startTime'] as Timestamp).toDate();
                                         } 
                                         else {
-                                          startTime = DateTime.now(); // 默认设置为当前时间
+                                          startTime = DateTime.now(); 
                                         }
 
                                         if (record['endTime'] is String) {
@@ -630,8 +630,8 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                                         }
 
                                         // using DateFormat to format date
-                                        String formattedStartDate = DateFormat('yyyy-MM-dd').format(startTime);
-                                        String formattedEndDate = DateFormat('yyyy-MM-dd').format(endTime);
+                                        String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:mm').format(startTime);
+                                        String formattedEndDate = DateFormat('yyyy-MM-dd HH:mm:mm').format(endTime);
 
                                         Navigator.push(
                                           context,
