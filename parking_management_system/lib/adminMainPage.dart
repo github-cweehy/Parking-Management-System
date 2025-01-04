@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_chart_plus/flutter_chart.dart';
+import 'package:intl/intl.dart';
 import 'package:parking_management_system/adminCustomerList.dart';
 import 'package:parking_management_system/adminHelp.dart';
 import 'package:parking_management_system/adminPBHistory.dart';
@@ -44,6 +45,8 @@ class _AdminMainPageState extends State<AdminMainPage> {
   @override
   void initState() {
     super.initState();
+    startDate = DateTime.now(); //initialize current date
+    endDate = DateTime.now();
     _fetchAdminUsername();
     _fetchSuperAdminUsername();
     _fetchTransactionsData();
@@ -102,16 +105,20 @@ class _AdminMainPageState extends State<AdminMainPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("No available dates to select.")),
       );
-
       return;
     }
 
     DateTime minDate = availableDates.reduce((a, b) => a.isBefore(b) ? a : b);
     DateTime maxDate = availableDates.reduce((a, b) => a.isAfter(b) ? a : b);
 
+    DateTime initialDate = isStartDate ? startDate : endDate;
+    if (initialDate.isAfter(maxDate)) {
+      initialDate = maxDate;
+    }
+
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate:  availableDates.first,
+      initialDate: initialDate, 
       firstDate: minDate,
       lastDate: maxDate,
       selectableDayPredicate: (date) {
@@ -121,22 +128,20 @@ class _AdminMainPageState extends State<AdminMainPage> {
 
     if (picked != null) {
       setState(() {
-        if(isStartDate) {
-          startDate = picked;
-
-          if(endDate.isBefore(startDate)) {
-            endDate = startDate;
+        if (isStartDate) {
+          startDate = DateTime(picked.year, picked.month, picked.day); 
+          
+          if (endDate.isBefore(startDate)) {
+            endDate = DateTime(startDate.year, startDate.month, startDate.day, 23, 59, 59); 
           }
         }
-        else{
-          endDate = picked;
-
-          if(startDate.isAfter(endDate)) {
-            startDate = endDate;
+        else {
+          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
+          if (startDate.isAfter(endDate)) {
+            startDate = DateTime(endDate.year, endDate.month, endDate.day); 
           }
         }
       });
-
       _fetchTransactionsData();
     }
   }
@@ -150,8 +155,12 @@ class _AdminMainPageState extends State<AdminMainPage> {
         return DateTime(timestamp.toDate().year, timestamp.toDate().month, timestamp.toDate().day);
       }).toList();
 
-      // prevent duplicate date
-      return availableDates.toSet().toList();
+      if (availableDates.isEmpty) {
+        availableDates.add(DateTime.now());
+      }
+
+      return availableDates;
+
     } catch (e) {
       print("Error fetching available dates: $e");
       return [];
@@ -173,8 +182,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
       int parkingCount = 0;
       int packagesCount = 0;
 
-      Map<DateTime, double> tempDailyProfit = {};
-
       for (var doc in transactionsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
@@ -183,7 +190,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
         String? packages = data['packages'];
         DateTime date = (data['timestamp'] as Timestamp).toDate();
         DateTime dateKey = DateTime(date.year, date.month, date.day);
-
 
         sales += amount;
 
@@ -196,8 +202,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
           packagesProfit += amount;
           packagesCount++;
         }
-
-        tempDailyProfit.update(dateKey, (value) => value + amount, ifAbsent: () => amount);
       }
 
       setState(() {
@@ -206,7 +210,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
         totalPackagesTransactions = packagesProfit;
         totalParkingCount = parkingCount;
         totalPackagesCount = packagesCount;
-        dailyProfit = tempDailyProfit;
+        dailyProfit;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -567,22 +571,51 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 ),
               ),
             ),
-            SizedBox(height: 18),
+            SizedBox(height: 25),
 
             //Bar Chart
             Container(
-              height: 300, 
-              padding: EdgeInsets.symmetric(vertical: 10),
-              child: BarChart(
-                data: dailyProfit.entries.map((entry) {
-                  return BarChartData(
-                    x: entry.key,
-                    y: entry.value,
-                  );
-                }).toList(),
-                barWidth: 12,
-                xAxisLabel: 'Date',
-                yAxisLabel: 'Profit (RM)',
+              height: 250,
+              padding: EdgeInsets.all(8),
+              child: dailyProfit.isEmpty 
+                ?Center(child: Text('No data available', style: TextStyle(color: Colors.grey)))
+              :ChartWidget(
+                coordinateRender: ChartDimensionsCoordinateRender(
+                  yAxis: [
+                    YAxis(min: 0,max: 10000)
+                  ],
+                  margin: const EdgeInsets.only(left: 40, top: 0, right: 0, bottom: 30),
+                  xAxis: XAxis(
+                    count: dailyProfit.keys.isEmpty ? 1 : dailyProfit.keys.length,
+                    max: 7,
+                    formatter: (index) {
+                      if(dailyProfit.keys.isEmpty) {
+                        return 'No Data';
+                      }
+                      final DateTime date = dailyProfit.keys.elementAt(index.toInt()); 
+                      return DateFormat('dd').format(date);
+                    },
+                  ),
+                  charts: [
+                    StackBar(
+                      data: dailyProfit.entries.map((entry) {
+                        return {
+                          'Date': entry.key,
+                          'dailyProfit': entry.value, 
+                        };
+                      }).toList(),
+                      position: (item) {
+                        return parserDateTimeToDayValue(item['Date'] as DateTime, startDate);
+                      },
+                      direction: Axis.horizontal,
+                      itemWidth: 18,
+                      highlightColor: Colors.red,
+                      values: (item) => [
+                        double.parse(item['dailyProfit'].toString()),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
             SizedBox(height: 6),
@@ -679,4 +712,11 @@ class _AdminMainPageState extends State<AdminMainPage> {
     return monthNames[month - 1];
   }
 }
+
+extension DateTimeFormatting on DateTime {
+  String toStringWithFormat({required String format}) {
+    return DateFormat(format).format(this);
+  }
+}
+
 

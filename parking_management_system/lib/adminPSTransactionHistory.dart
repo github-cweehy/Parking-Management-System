@@ -150,10 +150,11 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
     if (picked != null) {
       setState(() {
         if (isStartDate) {
-          startDate = picked;
+          startDate = DateTime(picked.year, picked.month, picked.day); // 设置时间为 00:00:00
           startTimestamp = Timestamp.fromDate(startDate);
-        } else {
-          endDate = picked;
+        } 
+        else {
+          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); // 设置时间为 23:59:59
           endTimestamp = Timestamp.fromDate(endDate);
         }
       });

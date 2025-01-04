@@ -95,13 +95,13 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   }
 
   Stream<QuerySnapshot> getFilteredData() {
-    // 使用 DateFormat 格式化时间
     String formattedStartTime = startTime != null ? DateFormat('yyyy-MM-dd HH:mm').format(startTime!) : '';
     String formattedEndTime = endTime != null ? DateFormat('yyyy-MM-dd HH:mm').format(endTime!) : '';
 
     if (formattedStartTime.isNotEmpty && formattedEndTime.isNotEmpty) {
       return _firestore.collection('history parking').where('startTime', isGreaterThanOrEqualTo: formattedStartTime).where('endTime', isLessThanOrEqualTo: formattedEndTime).snapshots();
-    } else {
+    } 
+    else {
       return _firestore.collection('history parking').snapshots();
     }
   }
@@ -132,16 +132,15 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     );
 
     if (picked != null) {
-      setState(() {
-        if (isStartDate) {
-          startTime = picked;
-          startTimestamp = Timestamp.fromDate(picked);
-        } else {
-          endTime = picked;
-          endTimestamp = Timestamp.fromDate(picked);
-        }
-      });
-    }
+    setState(() {
+      if (isStartDate) {
+        startTime = DateTime(picked.year, picked.month, picked.day); 
+      } 
+      else {
+        endTime = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
+      }
+    });
+  }
   }
 
   Future<List<DateTime>> getAvailableDates() async {
@@ -178,12 +177,6 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
       print("Error fetching available dates: $e");
       return [];
     }
-  }
-
-  void _loadDataForDate(DateTime date) {
-    setState(() {
-      startTimestamp = endTimestamp = Timestamp.fromDate(date);
-    });
   }
 
   void _logout(BuildContext context) async {
@@ -614,25 +607,29 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                                         DateTime startTime;
                                         DateTime endTime;
 
-                                        // 检查并正确转换 startTime 和 endTime
+                                        // Checks and correctly converts startTime and endTime.
                                         if (record['startTime'] is String) {
                                           startTime = DateTime.parse(record['startTime']);
-                                        } else if (record['startTime'] is Timestamp) {
+                                        } 
+                                        else if (record['startTime'] is Timestamp) {
                                           startTime = (record['startTime'] as Timestamp).toDate();
-                                        } else {
+                                        } 
+                                        else {
                                           startTime = DateTime.now(); // 默认设置为当前时间
                                         }
 
                                         if (record['endTime'] is String) {
                                           endTime = DateTime.parse(record['endTime']);
-                                        } else if (record['endTime'] is Timestamp) {
+                                        } 
+                                        else if (record['endTime'] is Timestamp) {
                                           endTime = (record['endTime'] as Timestamp).toDate();
-                                        } else {
-                                          // 如果没有合适的类型处理，可以抛出错误或设置默认值
-                                          endTime = DateTime.now(); // 默认设置为当前时间
+                                        } 
+                                        else {
+                                          // If there is no proper type handling, throw an error or set a default value
+                                          endTime = DateTime.now(); // default setting for the current time
                                         }
 
-                                        // 使用 DateFormat 格式化日期
+                                        // using DateFormat to format date
                                         String formattedStartDate = DateFormat('yyyy-MM-dd').format(startTime);
                                         String formattedEndDate = DateFormat('yyyy-MM-dd').format(endTime);
 
