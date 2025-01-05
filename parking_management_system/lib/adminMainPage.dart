@@ -35,12 +35,13 @@ class _AdminMainPageState extends State<AdminMainPage> {
   double totalPackagesTransactions = 0;
   int totalParkingCount = 0;
   int totalPackagesCount = 0;
+  List<Map<String, dynamic>> dataList = [];
 
   DateTime? selectedDate;
   DateTime startDate = DateTime.now();
   DateTime endDate = DateTime.now();
 
-  Map<DateTime, double> dailyProfit = {};
+  Map<DateTime, double> dailyProfitList = {};
 
   @override
   void initState() {
@@ -182,6 +183,10 @@ class _AdminMainPageState extends State<AdminMainPage> {
       int parkingCount = 0;
       int packagesCount = 0;
 
+      //Data grouped by day
+      Map<DateTime, double> dailyParkingProfit = {};
+      Map<DateTime, double> dailyPackagesProfit = {};
+
       for (var doc in transactionsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
@@ -196,13 +201,36 @@ class _AdminMainPageState extends State<AdminMainPage> {
         if (parking != null) {
           parkingProfit += amount;
           parkingCount++;
+          dailyParkingProfit[dateKey] = (dailyParkingProfit[dateKey] ?? 0) + amount;
         }
 
         if (packages != null) {
           packagesProfit += amount;
           packagesCount++;
+          dailyPackagesProfit[dateKey] = (dailyPackagesProfit[dateKey] ?? 0) + amount;
         }
       }
+
+      //Combine parkingProfit and packagesProfit into dailyProfitList, then send the data to Barchart
+      final dailyProfitList = List<Map<String, dynamic>>.from(
+         dailyParkingProfit.keys.map((dateKey){
+          return {
+            'Date': dateKey,
+            'parkingProfit': dailyParkingProfit[dateKey] ?? 0.0,
+            'packagesProfit': dailyPackagesProfit[dateKey] ?? 0.0,
+          };
+         }),
+      );
+
+      if(dailyProfitList.isEmpty) {
+        dailyProfitList.add({
+          'Date': DateTime.now(),
+          'parkingProfit': 0.0,
+          'packagesProfit': 0.0,
+        });
+      }
+
+      print(dataList);
 
       setState(() {
         totalSales = sales;
@@ -210,7 +238,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
         totalPackagesTransactions = packagesProfit;
         totalParkingCount = parkingCount;
         totalPackagesCount = packagesCount;
-        dailyProfit;
+        dataList = dailyProfitList;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -536,7 +564,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                           Text(
                               "${endDate.day} ${_monthName(endDate.month)} ${endDate.year}",
                               style: TextStyle(color: Colors.black, fontSize: 13.5),
-                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -577,41 +605,42 @@ class _AdminMainPageState extends State<AdminMainPage> {
             Container(
               height: 250,
               padding: EdgeInsets.all(8),
-              child: dailyProfit.isEmpty 
+              child: dataList.isEmpty 
                 ?Center(child: Text('No data available', style: TextStyle(color: Colors.grey)))
               :ChartWidget(
                 coordinateRender: ChartDimensionsCoordinateRender(
                   yAxis: [
-                    YAxis(min: 0,max: 10000)
+                    YAxis(min: 0,max: 1000)
                   ],
-                  margin: const EdgeInsets.only(left: 40, top: 0, right: 0, bottom: 30),
+                  margin: EdgeInsets.only(left: 40, top: 0, right: 0, bottom: 30),
                   xAxis: XAxis(
-                    count: dailyProfit.keys.isEmpty ? 1 : dailyProfit.keys.length,
-                    max: 7,
+                    //avoid count by 0
+                    count: dataList.length > 0 ? dataList.length : 1,
+                    max: dataList.length.toDouble(),
                     formatter: (index) {
-                      if(dailyProfit.keys.isEmpty) {
+                      if(dataList.isEmpty) {
                         return 'No Data';
                       }
-                      final DateTime date = dailyProfit.keys.elementAt(index.toInt()); 
+                      final DateTime date = dataList[index.toInt()]['Date'] as DateTime;
                       return DateFormat('dd').format(date);
                     },
-                  ),
+                  ), 
                   charts: [
                     StackBar(
-                      data: dailyProfit.entries.map((entry) {
-                        return {
-                          'Date': entry.key,
-                          'dailyProfit': entry.value, 
-                        };
-                      }).toList(),
+                      data: dataList,
+                      colors: [Colors.blue, Colors.green],
                       position: (item) {
-                        return parserDateTimeToDayValue(item['Date'] as DateTime, startDate);
+                        final DateTime date = item['Date'] as DateTime;
+                        final daysDifference = date.difference(startDate).inDays;
+
+                        return daysDifference.clamp(0, dataList.length - 1).toDouble(); 
                       },
                       direction: Axis.horizontal,
                       itemWidth: 18,
                       highlightColor: Colors.red,
                       values: (item) => [
-                        double.parse(item['dailyProfit'].toString()),
+                        item['parkingProfit'] ?? 0.0,
+                        item['packagesProfit'] ?? 0.0,
                       ],
                     ),
                   ],
@@ -696,18 +725,8 @@ class _AdminMainPageState extends State<AdminMainPage> {
 
   String _monthName(int month) {
     const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return monthNames[month - 1];
   }
