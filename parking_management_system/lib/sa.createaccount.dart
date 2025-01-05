@@ -50,16 +50,58 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
   void initState() {
     super.initState();
     _fetchSuperAdminUsername();
+    _fetchAdminUsername();
+  }
+
+    // Fetch superadmin username from Firebase
+  void _fetchSuperAdminUsername() async {
+    try {
+      DocumentSnapshot snapshot = await _firestore
+        .collection('superadmin')
+        .doc(widget.superadminId)
+        .get();
+
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          admin_username = snapshot['superadmin_username'];
+        });
+      }
+    } catch (e) {
+      print("Error fetching superadmin username: $e");
+    }
+  }
+
+  // Fetch admin username from Firebase
+  void _fetchAdminUsername() async {
+    try {
+      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
+      if (snapshot.exists && snapshot.data() != null) {
+        setState(() {
+          admin_username = snapshot['admin_username'];
+        });
+      }
+    } catch (e) {
+      print("Error fetching admin username: $e");
+    }
   }
 
   Future<void> createAdmin() async {
     if (_formKey.currentState!.validate() && isNotARobot) {
       try {
-        final QuerySnapshot userduplicateEmail = await _firestore.collection('users').where('email', isEqualTo: email).get();
+        final QuerySnapshot userduplicateEmail = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .get();
 
-        final QuerySnapshot adminduplicateEmail = await _firestore.collection('admins').where('email', isEqualTo: email).get();
+        final QuerySnapshot adminduplicateEmail = await _firestore
+          .collection('admins')
+          .where('email', isEqualTo: email)
+          .get();
 
-        final QuerySnapshot superadminduplicateEmail = await _firestore.collection('superadmin').where('email', isEqualTo: email).get();
+        final QuerySnapshot superadminduplicateEmail = await _firestore
+          .collection('superadmin')
+          .where('email', isEqualTo: email)
+          .get();
 
         if (userduplicateEmail.docs.isNotEmpty || adminduplicateEmail.docs.isNotEmpty || superadminduplicateEmail.docs.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -70,11 +112,20 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
           return;
         }
 
-        final QuerySnapshot userduplicatePhoneNumber = await _firestore.collection('users').where('phone_number', isEqualTo: phoneNumber).get();
+        final QuerySnapshot userduplicatePhoneNumber = await _firestore
+          .collection('users')
+          .where('phone_number', isEqualTo: phoneNumber)
+          .get();
 
-        final QuerySnapshot adminduplicatePhoneNumber = await _firestore.collection('admins').where('phone_number', isEqualTo: phoneNumber).get();
+        final QuerySnapshot adminduplicatePhoneNumber = await _firestore
+          .collection('admins')
+          .where('phone_number', isEqualTo: phoneNumber)
+          .get();
 
-        final QuerySnapshot superadminduplicatePhoneNumber = await _firestore.collection('superadmin').where('phone_number', isEqualTo: phoneNumber).get();
+        final QuerySnapshot superadminduplicatePhoneNumber = await _firestore
+          .collection('superadmin')
+          .where('phone_number', isEqualTo: phoneNumber)
+          .get();
 
         if (userduplicatePhoneNumber.docs.isNotEmpty || adminduplicatePhoneNumber.docs.isNotEmpty || superadminduplicatePhoneNumber.docs.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -125,20 +176,6 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
     }
   }
 
-  // Fetch superadmin username from Firebase
-  void _fetchSuperAdminUsername() async {
-    try {
-      DocumentSnapshot snapshot = await _firestore.collection('superadmin').doc(widget.superadminId).get();
-      if (snapshot.exists && snapshot.data() != null) {
-        setState(() {
-          admin_username = snapshot['superadmin_username'];
-        });
-      }
-    } catch (e) {
-      print("Error fetching superadmin username: $e");
-    }
-  }
-
   void _logout(BuildContext context) async {
     try {
       // Sign out from firebase authentication
@@ -176,47 +213,6 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
           height: 60,
         ),
         centerTitle: true,
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<String>(
-              underline: SizedBox(),
-              icon: Row(
-                children: [
-                  Text(
-                    admin_username,
-                    style: TextStyle(color: Colors.black),
-                  ),
-                  Icon(
-                    Icons.arrow_drop_down,
-                    color: Colors.black,
-                  ),
-                ],
-              ),
-              items: <String>[
-                'Profile',
-                'Logout'
-              ].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? value) {
-                if (value == 'Profile') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId, adminId: widget.adminId),
-                    ),
-                  );
-                } else if (value == 'Logout') {
-                  _logout(context);
-                }
-              },
-            ),
-          ),
-        ],
       ),
       drawer: Drawer(
           child: ListView(

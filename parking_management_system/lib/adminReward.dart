@@ -113,15 +113,16 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
   //Fetch reward history from firebase
   void _fetchRewardFromFirebase() async {
     try {
-      QuerySnapshot snapshot = await _firestore.collection('rewards').get();
+      QuerySnapshot rewardSnapshot = await _firestore.collection('rewards').get();
 
       List<Map<String, dynamic>> activeRewards = [];
       List<Map<String, dynamic>> pastRewards = [];
 
-      snapshot.docs.forEach((doc) {
+      rewardSnapshot.docs.forEach((doc) {
         var reward = {
           'id': doc.id,
           'userId': doc['userId'],
+          'rewardCode': doc['rewardCode'],
           'createdAt': doc['createdAt'] != null ? doc['createdAt'].toDate() : null,
           'expiryDate': doc['expiryDate'] != null ? doc['expiryDate'].toDate() : null,
           'isUsed': doc['isUsed'],
@@ -134,6 +135,31 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
           activeRewards.add(reward);
         }
       });
+
+      QuerySnapshot historySnapshot = await _firestore
+        .collection('history parking')
+        .where('isUsedByVoucher', isEqualTo: true)
+        .get();
+
+      for(var doc in historySnapshot.docs) {
+        String rewardId = doc['rewardId']; 
+        Timestamp startTime = doc['startTime'] ?? TimeOfDay.now();
+        DateTime dateTime = startTime.toDate().toLocal();
+        String formattedTime = DateFormat('dd MMMM yyyy HH:mm').format(dateTime);
+
+        var matchReward = pastRewards.firstWhere(
+          (rewards) => rewards['rewardCode'] == rewardId,
+          orElse: () => {},
+        );
+
+        if (matchReward.isNotEmpty) {
+          matchReward['usedTime'] = formattedTime;
+        }
+        else {
+          pastRewards.removeWhere((reward) => reward['rewardCode'] == rewardId);
+        }
+
+      }
       setState(() {
         rewards['activeRewards'] = activeRewards;
         rewards['pastRewards'] = pastRewards;
@@ -443,7 +469,7 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              //Pass Rewards
+                              //Active Rewards
                               Row(
                                 children: [
                                   Text(
@@ -486,7 +512,7 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
                               ),
                               SizedBox(height: 18),
                               Text(
-                                'Status: Unsed',
+                                'Status: Unused',
                                 style: TextStyle(
                                   fontSize: 16,
                                   color: Colors.white,
@@ -561,12 +587,16 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
                                 ],
                               ),
                               SizedBox(height: 16),
-                              Text(
-                                'Status: Used',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                ),
+                              Row(
+                                children: [
+                                  Text(
+                                    'Redeemed: ${reward['usedTime'] ?? "Unknown"}',  
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),

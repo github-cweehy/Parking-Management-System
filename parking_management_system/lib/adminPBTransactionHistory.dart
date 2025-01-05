@@ -114,11 +114,13 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
   Stream<QuerySnapshot> getFilteredData() {
     if (startTimestamp != null && endTimestamp != null) {
       return _firestore.collection('transactions').where('timestamp', isGreaterThanOrEqualTo: startTimestamp).where('timestamp', isLessThanOrEqualTo: endTimestamp).snapshots();
-    } else {
+    } 
+    else {
       return _firestore.collection('transactions').snapshots();
     }
   }
 
+  //selected date
   void _selectDate(BuildContext context, bool isStartDate) async {
     List<DateTime> availableDates = await getAvailableDates();
 
@@ -146,10 +148,11 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
     if (picked != null) {
       setState(() {
         if (isStartDate) {
-          startDate = picked;
+          startDate = DateTime(picked.year, picked.month, picked.day); // 设置时间为 00:00:00
           startTimestamp = Timestamp.fromDate(startDate);
-        } else {
-          endDate = picked;
+        } 
+        else {
+          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); // 设置时间为 23:59:59
           endTimestamp = Timestamp.fromDate(endDate);
         }
       });
@@ -171,15 +174,6 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
       print("Error fetching available dates: $e");
       return [];
     }
-  }
-
-  void _loadDataForDate(DateTime date) {
-    setState(() {
-      startDate = date;
-      endDate = date;
-      startTimestamp = Timestamp.fromDate(startDate);
-      endTimestamp = Timestamp.fromDate(endDate);
-    });
   }
 
   void _logout(BuildContext context) async {
