@@ -553,8 +553,8 @@ Future<void> _fetchPricing() async {
                         await parkingSelectionDocRef.update({
                           'vehiclePlateNum': selectedPlate,
                           'price': price.toStringAsFixed(2),
-                          'startTime': startDateTime.toString(),
-                          'endTime': endDateTime.toString(),
+                          'startTime': Timestamp.fromDate(startDateTime),
+                          'endTime': Timestamp.fromDate(endDateTime),
                           'status' : 'temporary',
                         });
 
