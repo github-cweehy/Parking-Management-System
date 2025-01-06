@@ -183,10 +183,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
       int parkingCount = 0;
       int packagesCount = 0;
 
-      //Data grouped by day
-      Map<DateTime, double> dailyParkingProfit = {};
-      Map<DateTime, double> dailyPackagesProfit = {};
-
       for (var doc in transactionsSnapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
@@ -201,36 +197,20 @@ class _AdminMainPageState extends State<AdminMainPage> {
         if (parking != null) {
           parkingProfit += amount;
           parkingCount++;
-          dailyParkingProfit[dateKey] = (dailyParkingProfit[dateKey] ?? 0) + amount;
         }
 
         if (packages != null) {
           packagesProfit += amount;
           packagesCount++;
-          dailyPackagesProfit[dateKey] = (dailyPackagesProfit[dateKey] ?? 0) + amount;
         }
       }
 
-      //Combine parkingProfit and packagesProfit into dailyProfitList, then send the data to Barchart
-      final dailyProfitList = List<Map<String, dynamic>>.from(
-         dailyParkingProfit.keys.map((dateKey){
-          return {
-            'Date': dateKey,
-            'parkingProfit': dailyParkingProfit[dateKey] ?? 0.0,
-            'packagesProfit': dailyPackagesProfit[dateKey] ?? 0.0,
-          };
-         }),
-      );
+      final dataList = [
+        {'label': 'Parking Profit', 'value': parkingProfit},
+        {'label': 'Packages Profit', 'value': packagesProfit},
+      ];
 
-      if(dailyProfitList.isEmpty) {
-        dailyProfitList.add({
-          'Date': DateTime.now(),
-          'parkingProfit': 0.0,
-          'packagesProfit': 0.0,
-        });
-      }
-
-      print(dataList);
+      print('Fetched dataList: $dataList');
 
       setState(() {
         totalSales = sales;
@@ -238,7 +218,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
         totalPackagesTransactions = packagesProfit;
         totalParkingCount = parkingCount;
         totalPackagesCount = packagesCount;
-        dataList = dailyProfitList;
+        this.dataList = dataList;
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -599,53 +579,41 @@ class _AdminMainPageState extends State<AdminMainPage> {
                 ),
               ),
             ),
-            SizedBox(height: 25),
+            SizedBox(height: 15),
 
             //Bar Chart
             Container(
               height: 250,
               padding: EdgeInsets.all(8),
-              child: dataList.isEmpty 
-                ?Center(child: Text('No data available', style: TextStyle(color: Colors.grey)))
-              :ChartWidget(
-                coordinateRender: ChartDimensionsCoordinateRender(
-                  yAxis: [
-                    YAxis(min: 0,max: 1000)
-                  ],
-                  margin: EdgeInsets.only(left: 40, top: 0, right: 0, bottom: 30),
-                  xAxis: XAxis(
-                    //avoid count by 0
-                    count: dataList.length > 0 ? dataList.length : 1,
-                    max: dataList.length.toDouble(),
-                    formatter: (index) {
-                      if(dataList.isEmpty) {
-                        return 'No Data';
-                      }
-                      final DateTime date = dataList[index.toInt()]['Date'] as DateTime;
-                      return DateFormat('dd').format(date);
-                    },
-                  ), 
-                  charts: [
-                    StackBar(
-                      data: dataList,
-                      colors: [Colors.blue, Colors.green],
-                      position: (item) {
-                        final DateTime date = item['Date'] as DateTime;
-                        final daysDifference = date.difference(startDate).inDays;
-
-                        return daysDifference.clamp(0, dataList.length - 1).toDouble(); 
-                      },
-                      direction: Axis.horizontal,
-                      itemWidth: 18,
-                      highlightColor: Colors.red,
-                      values: (item) => [
-                        item['parkingProfit'] ?? 0.0,
-                        item['packagesProfit'] ?? 0.0,
-                      ],
-                    ),
-                  ],
+              child: dataList.isEmpty
+              ? Center(
+                  child: Text(
+                    'No data available',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+                :ChartWidget(
+                  coordinateRender: ChartCircularCoordinateRender(
+                    margin: EdgeInsets.only(left: 40, top: 0, right: 0, bottom: 30),
+                    charts: [
+                      Pie(
+                        data: dataList,
+                        position: (item) => item['value'],
+                        colors: [Colors.blue, Colors.orange],
+                        holeRadius: 60, 
+                        valueTextOffset: 50,
+                        centerTextStyle: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        valueFormatter: (item) {
+                          return '${item['label']}\nRM ${item['value'].toStringAsFixed(2)}';
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ),
             SizedBox(height: 6),
             

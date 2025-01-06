@@ -667,18 +667,8 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
 
   String _monthName(int month) {
     List<String> monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return monthNames[month - 1];
   }
