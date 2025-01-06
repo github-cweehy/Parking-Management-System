@@ -56,6 +56,16 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
       }
     });
   }
+
+  String formatDateTime(dynamic dateTime) {
+    if (dateTime is Timestamp) {
+      return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(dateTime.toDate());
+    } else if (dateTime is String) {
+      return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.parse(dateTime));
+    } else {
+      return 'Invalid Date';
+    }
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -98,9 +108,9 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
                   Icon(Icons.calendar_today, color: Colors.red),
                   SizedBox(width: 10),
                   Text(
-                    'Start Date: ${dateFormat.format(widget.startDateTime)}',
+                    'Start Date: ${formatDateTime(widget.startDateTime)}',
                     style: TextStyle(fontSize: 16),
-                  ),
+                  ),                
                 ],
               ),
               SizedBox(height: 10),
@@ -122,7 +132,7 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
                   Icon(Icons.calendar_today, color: Colors.red),
                   SizedBox(width: 10),
                   Text(
-                    'End Date: ${dateFormat.format(widget.endDateTime)}',
+                    'End Date: ${formatDateTime(widget.endDateTime)}',
                     style: TextStyle(fontSize: 16),
                   ),
                 ],
@@ -244,6 +254,7 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
         'location': "All Melaka Area",
         'pricingOption': "Daily",
         'vehiclePlateNum': selectedPlate,
+        'price': 0,
       });
 
       // Update reward to mark as used

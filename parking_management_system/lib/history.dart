@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'favourite.dart';
 import 'help.dart';
 import 'packages.dart';
@@ -89,6 +90,16 @@ class _HistoryPageState extends State<HistoryPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error signing out. Please try again.')),
       );
+    }
+  }
+
+  String formatDateTime(dynamic dateTime) {
+    if (dateTime is Timestamp) {
+      return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(dateTime.toDate());
+    } else if (dateTime is String) {
+      return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.parse(dateTime));
+    } else {
+      return 'Invalid Date';
     }
   }
 
@@ -352,13 +363,13 @@ class _HistoryPageState extends State<HistoryPage> {
                                     Column(
                                       children: [
                                         Text(
-                                          "Start: ${data['startTime']}",
+                                          "Start: ${formatDateTime(data['startTime'])}",
                                           style: TextStyle(fontSize: 14, color: Colors.grey[800]),
                                         ),
                                         Text(
-                                          "End  : ${data['endTime']}",
+                                          "End  : ${formatDateTime(data['endTime'])}",
                                           style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-                                        )
+                                        ),                                      
                                       ],
                                     ),
                                   ],
@@ -385,7 +396,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                 Icon(Icons.price_change, color: Colors.red),
                                 SizedBox(width: 10),
                                 Text(
-                                  "RM ${data['price'] ?? 'Unknown price'}",
+                                  "RM ${(data['isUsedByVoucher'] == true) ? '0' : data['price'] ?? 'Unknown price'}",
                                   style: TextStyle(fontSize: 16, color: Colors.black),
                                 ),
                               ],
@@ -399,9 +410,9 @@ class _HistoryPageState extends State<HistoryPage> {
                                     MaterialPageRoute(
                                       builder: (context) => ParkingReceiptPage(
                                         district: data['location'] ?? 'Unknown location',
-                                        startTime: data['startTime'] ?? 'N/A',
-                                        endTime: data['endTime'] ?? 'N/A',
-                                        amount: double.tryParse(data['price'] ?? '0') ?? 0,
+                                        startTime: formatDateTime(data['startTime']),
+                                        endTime: formatDateTime(data['endTime']),
+                                        amount: (data['isUsedByVoucher'] == true) ? 0 : double.tryParse(data['price']?.toString() ?? '0') ?? 0,
                                         type: data['pricingOption'] ?? 'N/A',
                                       ),
                                     ),
