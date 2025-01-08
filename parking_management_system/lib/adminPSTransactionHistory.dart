@@ -118,7 +118,8 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
           .where('timestamp', isGreaterThanOrEqualTo: startTimestamp)
           .where('timestamp', isLessThanOrEqualTo: endTimestamp)
           .snapshots();
-    } else {
+    } 
+    else {
       return _firestore.collection('transactions').snapshots();
     }
   }
@@ -150,12 +151,11 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
     if (picked != null) {
       setState(() {
         if (isStartDate) {
-          startDate = DateTime(picked.year, picked.month, picked.day); // 设置时间为 00:00:00
+          startDate = DateTime(picked.year, picked.month, picked.day); 
           startTimestamp = Timestamp.fromDate(startDate);
         } 
         else {
-          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); // 设置时间为 23:59:59
-          endTimestamp = Timestamp.fromDate(endDate);
+          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
         }
       });
     }

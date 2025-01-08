@@ -91,13 +91,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   }
 
   Stream<QuerySnapshot> getFilteredData() {
-    Timestamp startTimestamp = Timestamp.fromDate(startTime);
-    Timestamp endTimestamp = Timestamp.fromDate(endTime);
-
-    return _firestore.collection('history parking')
-        .where('startTime', isGreaterThanOrEqualTo: startTimestamp)
-        .where('startTime', isLessThanOrEqualTo: endTimestamp)
-        .snapshots();
+    return _firestore.collection('history parking').snapshots();
   }
 
   void _selectDate(BuildContext context, bool isStartDate) async {
@@ -132,10 +126,17 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     if (picked != null) {
       setState(() {
         if (isStartDate) {
-          startTime = DateTime(picked.year, picked.month, picked.day); 
+          startTime = DateTime(picked.year, picked.month, picked.day);
+
+          if (endTime.isBefore(startTime)) {
+            endTime = DateTime(startTime.year, startTime.month, startTime.day, 23, 59, 59); 
+          } 
         } 
         else {
           endTime = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
+          if (startTime.isAfter(endTime)) {
+            startTime = DateTime(endTime.year, endTime.month, endTime.day); 
+          }
         }
       });
     }
@@ -543,24 +544,62 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                         if (!snapshot.hasData) {
                           return Center(child: CircularProgressIndicator());
                         }
+
                         final docs = snapshot.data!.docs;
-                        if (docs.isEmpty) {
+
+                        // Filtering data and parsing time
+                        final filteredDocs = docs.where((doc) {
+                          var data = doc.data() as Map<String, dynamic>;
+
+                          DateTime docStartTime;
+                          DateTime docEndTime;
+
+                          if (data['startTime'] is String) {
+                            docStartTime = DateTime.parse(data['startTime']);
+                          } else if (data['startTime'] is Timestamp) {
+                            docStartTime = (data['startTime'] as Timestamp).toDate();
+                          } else {
+                            return false; 
+                          }
+
+                          if (data['endTime'] is String) {
+                            docEndTime = DateTime.parse(data['endTime']);
+                          } else if (data['endTime'] is Timestamp) {
+                            docEndTime = (data['endTime'] as Timestamp).toDate();
+                          } else {
+                            return false; 
+                          }
+
+                          return docStartTime.isAfter(startTime) && docEndTime.isBefore(endTime);
+                        }).toList();
+
+                        filteredDocs.sort((a, b) {
+                          var aData = a.data() as Map<String, dynamic>;
+                          var bData = b.data() as Map<String, dynamic>;
+
+                          DateTime aStartTime = aData['startTime'] is String
+                            ? DateTime.parse(aData['startTime'])
+                            : (aData['startTime'] as Timestamp).toDate();
+
+                          DateTime bStartTime = bData['startTime'] is String
+                            ? DateTime.parse(bData['startTime'])
+                            : (bData['startTime'] as Timestamp).toDate();
+
+                          return bStartTime.compareTo(aStartTime); // Descending order
+                        });
+
+                        if (filteredDocs.isEmpty) {
                           return Center(child: Text("No data available."));
                         }
 
-                        var history = docs.where((doc) {
-                          var data = doc.data() as Map<String, dynamic>; // 将文档数据转换为 Map
-                          return data.containsKey('username') && data['username'] != null; // 安全检查字段
-                        }).toList();
-
                         return ListView.builder(
-                          itemCount: history.length,
+                          itemCount: filteredDocs.length,
                           itemBuilder: (context, index) {
-                            var record = history[index];
+                            var record = filteredDocs[index];
                             var data = record.data() as Map<String, dynamic>;
 
                             if (!data.containsKey('username')) {
-                              return SizedBox.shrink(); 
+                              return SizedBox.shrink();
                             }
 
                             var username = data['username'] ?? 'Anonymous';
@@ -570,23 +609,19 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                             DateTime startTime;
                             if (data['startTime'] is String) {
                               startTime = DateTime.parse(data['startTime']);
-                            } 
-                            else if (data['startTime'] is Timestamp) {
+                            } else if (data['startTime'] is Timestamp) {
                               startTime = (data['startTime'] as Timestamp).toDate();
-                            } 
-                            else {
-                              startTime = DateTime.now(); 
+                            } else {
+                              startTime = DateTime.now();
                             }
 
                             DateTime endTime;
                             if (data['endTime'] is String) {
                               endTime = DateTime.parse(data['endTime']);
-                            } 
-                            else if (data['endTime'] is Timestamp) {
+                            } else if (data['endTime'] is Timestamp) {
                               endTime = (data['endTime'] as Timestamp).toDate();
-                            } 
-                            else {
-                              endTime = DateTime.now(); 
+                            } else {
+                              endTime = DateTime.now();
                             }
 
                             String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(startTime);
@@ -642,35 +677,6 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                                     IconButton(
                                       icon: Icon(Icons.download, color: Colors.white),
                                       onPressed: () {
-                                        DateTime startTime;
-                                        DateTime endTime;
-
-                                        // Checks and correctly converts startTime and endTime.
-                                        if (data['startTime'] is String) {
-                                          startTime = DateTime.parse(data['startTime']);
-                                        } 
-                                        else if (data['startTime'] is Timestamp) {
-                                          startTime = (data['startTime'] as Timestamp).toDate();
-                                        } 
-                                        else {
-                                          startTime = DateTime.now(); 
-                                        }
-
-                                        if (data['endTime'] is String) {
-                                          endTime = DateTime.parse(data['endTime']);
-                                        } 
-                                        else if (data['endTime'] is Timestamp) {
-                                          endTime = (data['endTime'] as Timestamp).toDate();
-                                        } 
-                                        else {
-                                 
-                                          endTime = DateTime.now(); 
-                                        }
-
-                                        // using DateFormat to format date
-                                        String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(startTime);
-                                        String formattedEndDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(endTime);
-
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
@@ -692,7 +698,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                           },
                         );
                       },
-                    ),
+                    )
                   ),
                 ],
               ),
