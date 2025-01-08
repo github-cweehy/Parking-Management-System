@@ -630,8 +630,8 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                                         }
 
                                         // using DateFormat to format date
-                                        String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:mm').format(startTime);
-                                        String formattedEndDate = DateFormat('yyyy-MM-dd HH:mm:mm').format(endTime);
+                                        String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(startTime);
+                                        String formattedEndDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(endTime);
 
                                         Navigator.push(
                                           context,

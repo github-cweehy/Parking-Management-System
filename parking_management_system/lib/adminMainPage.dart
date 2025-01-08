@@ -206,8 +206,8 @@ class _AdminMainPageState extends State<AdminMainPage> {
       }
 
       final dataList = [
-        {'label': 'Parking Profit', 'value': parkingProfit},
-        {'label': 'Packages Profit', 'value': packagesProfit},
+        {'label': 'Parking Profit', 'value': parkingProfit, 'color': Colors.orange},
+        {'label': 'Packages Profit', 'value': packagesProfit, 'color': Colors.blue},
       ];
 
       print('Fetched dataList: $dataList');
@@ -599,7 +599,7 @@ class _AdminMainPageState extends State<AdminMainPage> {
                       Pie(
                         data: dataList,
                         position: (item) => item['value'],
-                        colors: [Colors.blue, Colors.orange],
+                        colors: dataList.map((item) => item['color'] as Color).toList(),
                         holeRadius: 60, 
                         valueTextOffset: 50,
                         centerTextStyle: TextStyle(
