@@ -573,6 +573,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                           return docStartTime.isAfter(startTime) && docEndTime.isBefore(endTime);
                         }).toList();
 
+                        //Sort filteredDocs by startTime in descending order (newest first)
                         filteredDocs.sort((a, b) {
                           var aData = a.data() as Map<String, dynamic>;
                           var bData = b.data() as Map<String, dynamic>;
