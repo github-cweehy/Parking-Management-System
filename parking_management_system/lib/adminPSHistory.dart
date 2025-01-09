@@ -28,16 +28,14 @@ class ParkingSelectionHistoryPage extends StatefulWidget {
 
 class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  String admin_username = '';
 
   DateTime startTime = DateTime.now();
   DateTime endTime = DateTime.now();
-  String admin_username = '';
-
-  Timestamp? startTimestamp;
-  Timestamp? endTimestamp;
-
+  
   final Map<String, String> _usernameCache = {};
-  Future<String> _fetchUsername(String userId) async {
+
+   Future<String> _fetchUsername(String userId) async {
     if (_usernameCache.containsKey(userId)) {
       return _usernameCache[userId]!;
     }
@@ -62,8 +60,6 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
     super.initState();
     _fetchSuperAdminUsername();
     _fetchAdminUsername();
-    startTimestamp = Timestamp.fromDate(startTime);
-    endTimestamp = Timestamp.fromDate(endTime);
   }
 
   // Fetch admin username from Firebase
@@ -95,15 +91,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
   }
 
   Stream<QuerySnapshot> getFilteredData() {
-    String formattedStartTime = startTime != null ? DateFormat('yyyy-MM-dd HH:mm').format(startTime!) : '';
-    String formattedEndTime = endTime != null ? DateFormat('yyyy-MM-dd HH:mm').format(endTime!) : '';
-
-    if (formattedStartTime.isNotEmpty && formattedEndTime.isNotEmpty) {
-      return _firestore.collection('history parking').where('startTime', isGreaterThanOrEqualTo: formattedStartTime).where('endTime', isLessThanOrEqualTo: formattedEndTime).snapshots();
-    } 
-    else {
-      return _firestore.collection('history parking').snapshots();
-    }
+    return _firestore.collection('history parking').snapshots();
   }
 
   void _selectDate(BuildContext context, bool isStartDate) async {
@@ -116,31 +104,42 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
       return;
     }
 
-    DateTime minDate = availableDates.reduce((a, b) => a.isBefore(b) ? a : b);
-    DateTime maxDate = availableDates.reduce((a, b) => a.isAfter(b) ? a : b);
+    DateTime initialDate = availableDates.firstWhere(
+      (date) => date.year == startTime.year && date.month == startTime.month && date.day == startTime.day,
+      orElse: () => availableDates.first, 
+    );
 
-    final DateTime? picked = await showDatePicker(
+     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: availableDates.isNotEmpty ? availableDates.first : DateTime.now(),
-      firstDate: minDate,
-      lastDate: maxDate,
+      initialDate: initialDate, 
+      firstDate: availableDates.reduce((a, b) => a.isBefore(b) ? a : b),
+      lastDate: availableDates.reduce((a, b) => a.isAfter(b) ? a : b),
       selectableDayPredicate: (date) {
-        print("Checking date: ${date.toLocal()}");
 
-        return availableDates.isNotEmpty && availableDates.contains(DateTime(date.year, date.month, date.day));
+        return availableDates.any((availableDate) =>
+            availableDate.year == date.year &&
+            availableDate.month == date.month &&
+            availableDate.day == date.day);
       },
     );
 
     if (picked != null) {
-    setState(() {
-      if (isStartDate) {
-        startTime = DateTime(picked.year, picked.month, picked.day); 
-      } 
-      else {
-        endTime = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
-      }
-    });
-  }
+      setState(() {
+        if (isStartDate) {
+          startTime = DateTime(picked.year, picked.month, picked.day);
+
+          if (endTime.isBefore(startTime)) {
+            endTime = DateTime(startTime.year, startTime.month, startTime.day, 23, 59, 59); 
+          } 
+        } 
+        else {
+          endTime = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
+          if (startTime.isAfter(endTime)) {
+            startTime = DateTime(endTime.year, endTime.month, endTime.day); 
+          }
+        }
+      });
+    }
   }
 
   Future<List<DateTime>> getAvailableDates() async {
@@ -152,19 +151,24 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
             var data = doc.data() as Map<String, dynamic>;
             if (data.containsKey('startTime')) {
               var startTime = data['startTime'];
+
               if (startTime is String) {
                 try {
-                  DateTime parsedDate = DateTime.parse(startTime);
-                  return DateTime(parsedDate.year, parsedDate.month, parsedDate.day);
+                   return DateTime.parse(startTime);
                 } catch (e) {
                   print('Error parsing date: $startTime in document ${doc.id}');
                   return null;
                 }
-              } else {
-                print('Warning: startTime is not a String in document ${doc.id}');
+              } 
+              else if(startTime is Timestamp) {
+                return startTime.toDate();
+              }
+              else {
+                print('Warning: startTime is neither String nor Timestamp in document ${doc.id}');
                 return null;
               }
-            } else {
+            } 
+            else {
               print('Warning: startTime field missing in document ${doc.id}');
               return null;
             }
@@ -172,6 +176,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
           .whereType<DateTime>()
           .toList();
 
+      print('Available Dates: $availableDates'); 
       return availableDates;
     } catch (e) {
       print("Error fetching available dates: $e");
@@ -539,20 +544,89 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                         if (!snapshot.hasData) {
                           return Center(child: CircularProgressIndicator());
                         }
+
                         final docs = snapshot.data!.docs;
-                        if (docs.isEmpty) {
+
+                        // Filtering data and parsing time
+                        final filteredDocs = docs.where((doc) {
+                          var data = doc.data() as Map<String, dynamic>;
+
+                          DateTime docStartTime;
+                          DateTime docEndTime;
+
+                          if (data['startTime'] is String) {
+                            docStartTime = DateTime.parse(data['startTime']);
+                          } else if (data['startTime'] is Timestamp) {
+                            docStartTime = (data['startTime'] as Timestamp).toDate();
+                          } else {
+                            return false; 
+                          }
+
+                          if (data['endTime'] is String) {
+                            docEndTime = DateTime.parse(data['endTime']);
+                          } else if (data['endTime'] is Timestamp) {
+                            docEndTime = (data['endTime'] as Timestamp).toDate();
+                          } else {
+                            return false; 
+                          }
+
+                          return docStartTime.isAfter(startTime) && docEndTime.isBefore(endTime);
+                        }).toList();
+
+                        //Sort filteredDocs by startTime in descending order (newest first)
+                        filteredDocs.sort((a, b) {
+                          var aData = a.data() as Map<String, dynamic>;
+                          var bData = b.data() as Map<String, dynamic>;
+
+                          DateTime aStartTime = aData['startTime'] is String
+                            ? DateTime.parse(aData['startTime'])
+                            : (aData['startTime'] as Timestamp).toDate();
+
+                          DateTime bStartTime = bData['startTime'] is String
+                            ? DateTime.parse(bData['startTime'])
+                            : (bData['startTime'] as Timestamp).toDate();
+
+                          return bStartTime.compareTo(aStartTime); // Descending order
+                        });
+
+                        if (filteredDocs.isEmpty) {
                           return Center(child: Text("No data available."));
                         }
 
-                        var history = snapshot.data!.docs;
-
                         return ListView.builder(
-                          itemCount: history.length,
+                          itemCount: filteredDocs.length,
                           itemBuilder: (context, index) {
-                            var record = history[index];
-                            var username = record['username'] ?? 'Anonymous';
-                            var pricingOption = record['pricingOption'] ?? 'Unknown';
-                            var price = double.tryParse(record['price'].toString()) ?? 0.0;
+                            var record = filteredDocs[index];
+                            var data = record.data() as Map<String, dynamic>;
+
+                            if (!data.containsKey('username')) {
+                              return SizedBox.shrink();
+                            }
+
+                            var username = data['username'] ?? 'Anonymous';
+                            var pricingOption = data['pricingOption'] ?? 'Unknown';
+                            var price = double.tryParse(data['price'].toString()) ?? 0.0;
+
+                            DateTime startTime;
+                            if (data['startTime'] is String) {
+                              startTime = DateTime.parse(data['startTime']);
+                            } else if (data['startTime'] is Timestamp) {
+                              startTime = (data['startTime'] as Timestamp).toDate();
+                            } else {
+                              startTime = DateTime.now();
+                            }
+
+                            DateTime endTime;
+                            if (data['endTime'] is String) {
+                              endTime = DateTime.parse(data['endTime']);
+                            } else if (data['endTime'] is Timestamp) {
+                              endTime = (data['endTime'] as Timestamp).toDate();
+                            } else {
+                              endTime = DateTime.now();
+                            }
+
+                            String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(startTime);
+                            String formattedEndDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(endTime);
 
                             return Card(
                               color: Colors.red,
@@ -604,44 +678,15 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                                     IconButton(
                                       icon: Icon(Icons.download, color: Colors.white),
                                       onPressed: () {
-                                        DateTime startTime;
-                                        DateTime endTime;
-
-                                        // Checks and correctly converts startTime and endTime.
-                                        if (record['startTime'] is String) {
-                                          startTime = DateTime.parse(record['startTime']);
-                                        } 
-                                        else if (record['startTime'] is Timestamp) {
-                                          startTime = (record['startTime'] as Timestamp).toDate();
-                                        } 
-                                        else {
-                                          startTime = DateTime.now(); 
-                                        }
-
-                                        if (record['endTime'] is String) {
-                                          endTime = DateTime.parse(record['endTime']);
-                                        } 
-                                        else if (record['endTime'] is Timestamp) {
-                                          endTime = (record['endTime'] as Timestamp).toDate();
-                                        } 
-                                        else {
-                                          // If there is no proper type handling, throw an error or set a default value
-                                          endTime = DateTime.now(); // default setting for the current time
-                                        }
-
-                                        // using DateFormat to format date
-                                        String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:mm').format(startTime);
-                                        String formattedEndDate = DateFormat('yyyy-MM-dd HH:mm:mm').format(endTime);
-
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                             builder: (context) => ParkingReceiptPage(
-                                              district: record['location'],
+                                              district: data['location'],
                                               startTime: formattedStartDate,
                                               endTime: formattedEndDate,
-                                              amount: double.tryParse(record['price'] ?? '0') ?? 0,
-                                              type: record['pricingOption'] ?? 'N/A',
+                                              amount: double.tryParse(data['price'] ?? '0') ?? 0,
+                                              type: data['pricingOption'] ?? 'N/A',
                                             ),
                                           ),
                                         );
@@ -654,7 +699,7 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
                           },
                         );
                       },
-                    ),
+                    )
                   ),
                 ],
               ),
@@ -667,18 +712,8 @@ class _ParkingSelectionHistoryPageState extends State<ParkingSelectionHistoryPag
 
   String _monthName(int month) {
     List<String> monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return monthNames[month - 1];
   }

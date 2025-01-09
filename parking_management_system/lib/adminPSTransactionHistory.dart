@@ -118,7 +118,8 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
           .where('timestamp', isGreaterThanOrEqualTo: startTimestamp)
           .where('timestamp', isLessThanOrEqualTo: endTimestamp)
           .snapshots();
-    } else {
+    } 
+    else {
       return _firestore.collection('transactions').snapshots();
     }
   }
@@ -150,12 +151,11 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
     if (picked != null) {
       setState(() {
         if (isStartDate) {
-          startDate = DateTime(picked.year, picked.month, picked.day); // 设置时间为 00:00:00
+          startDate = DateTime(picked.year, picked.month, picked.day); 
           startTimestamp = Timestamp.fromDate(startDate);
         } 
         else {
-          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); // 设置时间为 23:59:59
-          endTimestamp = Timestamp.fromDate(endDate);
+          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
         }
       });
     }
@@ -562,8 +562,8 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
                         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                           return Center(child: Text(
                             startTimestamp != null && endTimestamp != null
-                                ? 'No data found for the selected date.'
-                                : 'No records available.'
+                              ? 'No data found for the selected date.'
+                              : 'No records available.'
                           ),
                           );
                         }
@@ -586,8 +586,6 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
 
                             //Format dates and times
                             DateTime dateTime = timestamp.toDate().toLocal();
-                            //Adjust time to the UTC+8 time zone
-                            dateTime = dateTime.add(Duration(hours: 8)); 
                             String formatdateTime = DateFormat('d MMM yyyy  h:mm a').format(dateTime);
 
                             //Determine if parking is null
@@ -610,12 +608,32 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
 
                                 //Get startTime endTime from history parking
                                 var parkingData = parkingSnapshot.data!;
-                                String startTimes = parkingData['startTime'];
-                                String endTimes = parkingData['endTime']; 
+                                dynamic StartTimes = parkingData['startTime'];
+                                dynamic EndTimes = parkingData['endTime'];
 
-                                //String convert to DateTime &(history parking)pricingOption (transactions parkingID)
-                                DateTime startTime = DateTime.parse(startTimes);
-                                DateTime endTime = DateTime.parse(endTimes);
+                                DateTime startTime;
+                                DateTime endTime;
+
+                                if (StartTimes is Timestamp) {
+                                  startTime = StartTimes.toDate();
+                                } 
+                                else if (StartTimes is String) {
+                                  startTime = DateTime.parse(StartTimes);
+                                }
+                                else {
+                                  startTime = DateTime.now(); 
+                                }
+
+                                if (EndTimes is Timestamp) {
+                                  endTime = EndTimes.toDate();
+                                } 
+                                else if (EndTimes is String) {
+                                  endTime = DateTime.parse(EndTimes);
+                                } 
+                                else {
+                                  endTime = DateTime.now();
+                                }
+
                                 String pricingOption = parkingData['pricingOption'] ?? 'Not available';
                                 String PlateNum = parkingData['vehiclePlateNum'] ??'Not available';
 

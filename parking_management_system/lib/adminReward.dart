@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:parking_management_system/adminMainPage.dart';
+import 'package:parking_management_system/parkingreceipt.dart';
 import 'package:parking_management_system/sa.manageaccount.dart';
 import 'adminCustomerList.dart';
 import 'adminEditPackagesBought.dart';
@@ -29,10 +30,10 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   String admin_username = '';
 
-  Map<String, List<Map<String, dynamic>>> rewards = {
-    'activeRewards': [],
-    'pastRewards': [],
-  };
+  DateTime startTime = DateTime.now();
+  DateTime endTime = DateTime.now();
+
+  List<Map<String, dynamic>> reward = [];
 
   final Map<String, String> _usernameCache = {};
   Future<String> _fetchUsername(String userId) async{
@@ -110,64 +111,165 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
     }
   }
 
+  //get filter data
+  Stream<QuerySnapshot> getFilteredData() {
+    if (startTime != null && endTime != null) {
+      return _firestore
+        .collection('history parking')
+        .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startTime))
+        .where('endTime', isLessThanOrEqualTo: Timestamp.fromDate(endTime))
+        .snapshots();
+    } 
+    else {
+      return _firestore.collection('history parking').snapshots();
+    }
+  }
+
+  //selected date
+  void _selectDate(BuildContext context, bool isStartDate) async {
+    List<DateTime> availableDates = await getAvailableDates();
+
+    if (availableDates.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("No available dates to select.")),
+      );
+      return;
+    }
+
+    DateTime minDate = availableDates.reduce((a, b) => a.isBefore(b) ? a : b);
+    DateTime maxDate = availableDates.reduce((a, b) => a.isAfter(b) ? a : b);
+
+    DateTime initialDate = isStartDate ? startTime : endTime;
+    if (initialDate.isAfter(maxDate)) {
+      initialDate = maxDate;
+    }
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: initialDate, 
+      firstDate: minDate,
+      lastDate: maxDate,
+      selectableDayPredicate: (date) {
+        return availableDates.contains(DateTime(date.year, date.month, date.day));
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        if (isStartDate) {
+          startTime = DateTime(picked.year, picked.month, picked.day); 
+          if (endTime.isBefore(startTime)) {
+            endTime = DateTime(startTime.year, startTime.month, startTime.day, 23, 59, 59); 
+          }
+        }
+        else {
+          endTime = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
+          if (startTime.isAfter(endTime)) {
+            startTime = DateTime(endTime.year, endTime.month, endTime.day); 
+          }
+        }
+      });
+      _fetchRewardFromFirebase();
+    }
+  }
+
+  //get availabledates
+  Future<List<DateTime>> getAvailableDates() async {
+    try {
+      QuerySnapshot snapshot = await _firestore.collection('history parking').get();
+
+      List<DateTime> availableDates = [];
+      
+      for(var doc in snapshot.docs) {
+
+        if (!doc.exists || !doc.data().toString().contains('startTime')) {
+          continue; 
+        }
+
+        dynamic startTime = doc['startTime'];
+        DateTime dateTime;
+
+        if(startTime is Timestamp) {
+          dateTime = startTime.toDate();
+        }
+        else if(startTime is String) {
+          dateTime = DateTime.parse(startTime);
+        }
+        else{
+          continue;
+        }
+
+        dateTime = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+        if(!availableDates.contains(dateTime)) {
+          availableDates.add(dateTime);
+        }
+      }
+
+      if (availableDates.isEmpty) {
+        availableDates.add(DateTime.now());
+      }
+      
+      return availableDates;
+
+    } catch (e) {
+      print("Error fetching available dates: $e");
+      return [];
+    }
+  }
+
   //Fetch reward history from firebase
   void _fetchRewardFromFirebase() async {
     try {
+      // Fetch all rewards from 'rewards' collection
       QuerySnapshot rewardSnapshot = await _firestore.collection('rewards').get();
+      Map<String, Map<String, dynamic>> rewardsMap = {
+        for (var doc in rewardSnapshot.docs)
+          doc['rewardCode']: {
+            'userId': doc['userId'],
+            'rewardCode': doc['rewardCode'],
+          }
+      };
 
-      List<Map<String, dynamic>> activeRewards = [];
-      List<Map<String, dynamic>> pastRewards = [];
-
-      rewardSnapshot.docs.forEach((doc) {
-        var reward = {
-          'id': doc.id,
-          'userId': doc['userId'],
-          'rewardCode': doc['rewardCode'],
-          'createdAt': doc['createdAt'] != null ? doc['createdAt'].toDate() : null,
-          'expiryDate': doc['expiryDate'] != null ? doc['expiryDate'].toDate() : null,
-          'isUsed': doc['isUsed'],
-        };
-
-        // Check isUsed to sort into active or past rewards
-        if (doc['isUsed'] == true) {
-          pastRewards.add(reward);
-        } else {
-          activeRewards.add(reward);
-        }
-      });
-
+      // Fetch all history parking records within the specified date range
       QuerySnapshot historySnapshot = await _firestore
-        .collection('history parking')
-        .where('isUsedByVoucher', isEqualTo: true)
-        .get();
+          .collection('history parking')
+          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startTime))
+          .where('endTime', isLessThanOrEqualTo: Timestamp.fromDate(endTime))
+          .get();
 
-      for(var doc in historySnapshot.docs) {
-        String rewardId = doc['rewardId']; 
-        Timestamp startTime = doc['startTime'] ?? TimeOfDay.now();
-        DateTime dateTime = startTime.toDate().toLocal();
-        String formattedTime = DateFormat('dd MMMM yyyy HH:mm').format(dateTime);
+      List<Map<String, dynamic>> matchedRewards = [];
 
-        var matchReward = pastRewards.firstWhere(
-          (rewards) => rewards['rewardCode'] == rewardId,
-          orElse: () => {},
-        );
-
-        if (matchReward.isNotEmpty) {
-          matchReward['usedTime'] = formattedTime;
-        }
-        else {
-          pastRewards.removeWhere((reward) => reward['rewardCode'] == rewardId);
+      for (var doc in historySnapshot.docs) {
+        // Skip if 'rewardId' or 'startTime' is missing
+        if (!doc.exists || !doc.data().toString().contains('rewardId') || !doc.data().toString().contains('startTime')) {
+          continue;
         }
 
+        String rewardId = doc['rewardId'];
+
+        // Match rewardId with rewardCode in rewardsMap
+        if (rewardsMap.containsKey(rewardId)) {
+          Map<String, dynamic> matchedReward = {
+            ...rewardsMap[rewardId]!,
+            'startTime':doc['startTime'],
+            'endTime': doc['endTime'],
+            'location': doc['location'],
+            'pricingOption': doc['pricingOption'] ?? 'Unknown',
+          };
+          matchedRewards.add(matchedReward);
+        }
       }
+
+      // Update the state with matched rewards
       setState(() {
-        rewards['activeRewards'] = activeRewards;
-        rewards['pastRewards'] = pastRewards;
+        reward = matchedRewards;
       });
     } catch (e) {
       print('Error fetching rewards: $e');
     }
   }
+
 
   void _logout(BuildContext context) async{
     try {
@@ -190,9 +292,7 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
@@ -421,10 +521,12 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
             ],
           )
         ),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        body: Padding(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
               children: [
                 IconButton(
                   icon: Icon(Icons.arrow_back_ios, color: Colors.black),
@@ -437,179 +539,176 @@ class _RewardHistoryPage extends State<RewardHistoryPage> {
               ],
             ),
             SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                //Start Date
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(left: 10.0),
+                      child: Text("Start Date", style: TextStyle(fontSize: 13)),
+                    ),
+                    GestureDetector(
+                      onTap: () => _selectDate(context, true),
+                      child: Container(
+                        width: 185,
+                        height: 40,
+                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade400),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.calendar_month, color: Colors.grey, size: 20),
+                            SizedBox(width: 5),
+                            //Text
+                            Text(
+                                "${startTime.day} ${_monthName(startTime.month)} ${startTime.year}",
+                                style: TextStyle(color: Colors.black, fontSize: 13.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
-            TabBar(
-              indicatorColor: Colors.red,
-              tabs: [
-                Tab(child: Text("Active Rewards", style: TextStyle(color: Colors.black))),
-                Tab(child: Text("Past Rewards", style: TextStyle(color: Colors.black))),
-              ],
-            ),      
-            Expanded(
-              child: TabBarView(
-                children: [
-                  //Active Rewards
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ListView.builder(
-                      itemCount: rewards['activeRewards']?.length ?? 0,
-                      itemBuilder: (context, index) {
-                        final reward = rewards['activeRewards']![index];
-                        final userId = reward['userId'] ?? '';
-                        var username = _usernameCache[userId] ?? 'Unknown User';
+                //End Date
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.only(left: 10.0),
+                      child: Text("End Date", style: TextStyle(fontSize: 13)),
+                    ),
+                    GestureDetector(
+                      onTap: () => _selectDate(context, false),
+                      child: Container(
+                        width: 185,
+                        height: 40,
+                        padding: EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade400),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.calendar_month, color: Colors.grey, size: 20),
+                            SizedBox(width: 5),
+                            //Text
+                            Text(
+                              "${endTime.day} ${_monthName(endTime.month)} ${endTime.year}",
+                              style: TextStyle(color: Colors.black, fontSize: 13.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ]),
+              SizedBox(height: 10),
+              Expanded(
+                child: reward.isEmpty
+                ?Center(child: Text("No rewards data."))
+                :ListView.builder(
+                  itemCount: reward.length,
+                  itemBuilder: (context, index) {
+                    final Reward = reward[index];
+                    final userId = Reward['userId'] ?? '';
+                    var username = _usernameCache[userId] ?? 'Unknown User';
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.red, width: 1.0),
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.red, width: 1.0),
+                      ),
+                      padding: EdgeInsets.all(16.0),
+                      margin: EdgeInsets.symmetric(vertical: 10, horizontal: 1),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            username,
+                            style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
+                            ),
                           ),
-                          padding: EdgeInsets.all(16.0),
-                          margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              //Active Rewards
-                              Row(
-                                children: [
-                                  Text(
-                                    '@$username',
-                                    style: TextStyle(
-                                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 15),
-                              Row(
-                                children: [
-                                  Icon(Icons.calendar_today, color: Colors.white, size: 20),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    reward['createdAt'] != null
-                                      ? 'Created: ${DateFormat('dd MMMM yyyy').format(reward['createdAt'])}'
-                                      : 'Created: Unknown',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(Icons.calendar_today, color: Colors.white, size: 20),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    'Expiry: ${DateFormat('dd MMMM yyyy').format(reward['expiryDate'].toDate())}',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 18),
-                              Text(
-                                'Status: Unused',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
+                          Spacer(),
+                          Text(
+                            'Voucher: ${Reward['pricingOption']}',
+                            style: TextStyle(
+                              fontSize: 15, 
+                              color: Colors.white
+                            ),
                           ),
-                        );
-                      },
-                    )
-                  ),
-                  //Past Reward
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ListView.builder(
-                      itemCount: rewards['pastRewards']?.length ?? 0,
-                      itemBuilder: (context, index) {
-                        final reward = rewards['pastRewards']![index];
-                        final userId = reward['userId'] ?? '';
-                        var username = _usernameCache[userId] ?? 'Unknown User';
+                          IconButton(
+                            icon: Icon(Icons.download, color: Colors.white),
+                            onPressed: () {
+                              DateTime startTime;
+                              DateTime endTime;
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.red, width: 1.0),
-                          ),
-                          padding: EdgeInsets.all(16.0),
-                          margin: EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              //Pass Rewards
-                              Row(
-                                children: [
-                                  Text(
-                                    '@$username',
-                                    style: TextStyle(
-                                      fontSize: 17, fontWeight: FontWeight.bold, color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 15),
-                              Row(
-                                children: [
-                                  Icon(Icons.calendar_today, color: Colors.white, size: 20),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    reward['createdAt'] != null
-                                      ? 'Created: ${DateFormat('dd MMMM yyyy').format(reward['createdAt'])}'
-                                      : 'Created: Unknown',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 6),
-                              Row(
-                                children: [
-                                  Icon(Icons.calendar_today, color: Colors.white, size: 20),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    'Expiry: ${DateFormat('dd MMMM yyyy').format(reward['expiryDate'])}',
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Text(
-                                    'Redeemed: ${reward['usedTime'] ?? "Unknown"}',  
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    )
-                  )
-                ],
-              ),
-            )
-          ],
+                              if(Reward['startTime']is String) {
+                                startTime = DateTime.parse(Reward['startTime']);
+                              }
+                              else if (Reward['startTime'] is Timestamp) {
+                                 startTime = (Reward['startTime'] as Timestamp).toDate();
+                              }
+                              else{
+                                startTime = DateTime.now();
+                              }
+
+                              if (Reward['endTime'] is String) {
+                                endTime = DateTime.parse(Reward['endTime']);
+                              } 
+                              else if (Reward['endTime'] is Timestamp) {
+                                endTime = (Reward['endTime'] as Timestamp).toDate();
+                              } 
+                              else {
+                                endTime = DateTime.now();
+                              }
+
+                              String formattedStartDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(startTime);
+                              String formattedEndDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(endTime);
+
+                              Navigator.push(
+                                context, 
+                                MaterialPageRoute(
+                                  builder: (context) => ParkingReceiptPage(
+                                    district: Reward['location'] ?? 'N/A', 
+                                    startTime: formattedStartDate, 
+                                    endTime: formattedEndDate,
+                                    amount: double.tryParse(Reward['price'] ?? '0') ?? 0,
+                                    type: Reward['pricingOption'] ?? 'N/A',
+                                  )
+                                )
+                              );
+                            },
+                          )
+                        ],
+                      ),
+                    );
+                  }
+                )
+              )
+            ],
+          ),
         ),
-      ),
-    );
+      );
+  }
+  String _monthName(int month) {
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return monthNames[month - 1];
   }
 }
