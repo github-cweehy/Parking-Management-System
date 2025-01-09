@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'package:parking_management_system/mainpage.dart';
 
 class EWalletPaymentPage extends StatefulWidget {
@@ -17,7 +18,7 @@ class EWalletPaymentPage extends StatefulWidget {
 class _EWalletPaymentPageState extends State<EWalletPaymentPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _phoneController = TextEditingController();
-  String? _selectedEWallet; // To store the selected e-wallet
+  String? _selectedEWallet; 
 
   @override
   void dispose() {
@@ -157,13 +158,13 @@ class _EWalletPaymentPageState extends State<EWalletPaymentPage> {
                   ),
                 ),
                 keyboardType: TextInputType.phone,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your phone number';
                   }
-                  final RegExp phoneRegExp = RegExp(r'^\d{10,11}$');
-                  if (!phoneRegExp.hasMatch(value)) {
-                    return 'Please enter a valid phone number (10-11 digits)';
+                  if (!RegExp(r'^01\d{8,9}$').hasMatch(value)) {
+                    return 'Phone number must start with 01 and be 10-11 digits long';
                   }
                   return null;
                 },

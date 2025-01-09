@@ -124,7 +124,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
               onPressed: () async {
                 String newValue = controller.text.trim();
                 if (newValue.isNotEmpty) {
-                  if (field == 'phone_number') {
+                  if (field == 'phone_number') {                    
+                    if (!RegExp(r'^01\d{8,9}$').hasMatch(newValue)) {
+                      _showSnackBar('Invalid phone number. It must start with 01 and be 10-11 digits long.');
+                      return;
+                    }
                     if (await _isPhoneNumberDuplicate(newValue)) {
                       _showSnackBar("This phone number is already in use.");
                       return;
