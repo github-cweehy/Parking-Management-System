@@ -39,6 +39,14 @@ class _ManageAccountPage extends State<ManageAccountPage> {
     _fetchSuperAdminUsername();
   }
 
+  // Perform initialization operations that depend on InheritedWidget here.
+   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fetchSuperAdminUsername();
+    _fetchAdminUsername();
+  }
+
   // Fetch superadmin username from Firebase
   void _fetchSuperAdminUsername() async {
     try {
@@ -199,7 +207,7 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(superadminId: '', adminId: ''),
+                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId ?? '', adminId: widget.adminId ?? ''),
                     ),
                   );
                 } else if (value == 'Logout') {

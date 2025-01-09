@@ -53,7 +53,15 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
     _fetchAdminUsername();
   }
 
-    // Fetch superadmin username from Firebase
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fetchSuperAdminUsername();
+    _fetchAdminUsername();
+  }
+
+
+  // Fetch superadmin username from Firebase
   void _fetchSuperAdminUsername() async {
     try {
       DocumentSnapshot snapshot = await _firestore

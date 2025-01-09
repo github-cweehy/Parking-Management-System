@@ -48,18 +48,23 @@ class _AdminMainPageState extends State<AdminMainPage> {
     super.initState();
     startDate = DateTime.now(); //initialize current date
     endDate = DateTime.now();
-    _fetchAdminUsername();
-    _fetchSuperAdminUsername();
     _fetchTransactionsData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fetchSuperAdminUsername();
+    _fetchAdminUsername();
   }
 
   // Fetch superadmin username from Firebase
   void _fetchSuperAdminUsername() async {
     try {
-      DocumentSnapshot snapshot = await _firestore.collection('superadmin').doc(widget.superadminId).get();
-      if (snapshot.exists && snapshot.data() != null) {
+      final superadminDoc = await FirebaseFirestore.instance.collection('superadmin').doc(widget.superadminId).get();
+      if (superadminDoc.exists) {
         setState(() {
-          admin_username = snapshot['superadmin_username'];
+          admin_username = superadminDoc.data()?['superadmin_username'] ?? 'Superadmin Username';
         });
       }
     } catch (e) {
@@ -700,10 +705,5 @@ class _AdminMainPageState extends State<AdminMainPage> {
   }
 }
 
-extension DateTimeFormatting on DateTime {
-  String toStringWithFormat({required String format}) {
-    return DateFormat(format).format(this);
-  }
-}
 
 
