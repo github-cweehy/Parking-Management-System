@@ -37,6 +37,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
   String adminLastName = '';
   String adminProfilePicture = '';
   String? profileImageUrl;
+  bool isPasswordVisible = false;
 
   TextEditingController phoneController = TextEditingController();
   TextEditingController newPasswordController = TextEditingController();
@@ -163,7 +164,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
       return;
     }
 
-    if (newPassword.length < 8) {
+    if (newPassword.length < 12) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Password must be at least 8 characters long.')),
       );
@@ -552,26 +553,6 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                         _buildReadOnlyTextField('Phone Number', adminPhoneNumber),
                         const SizedBox(height: 20),
 
-                        //Return Button
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AdminMainPage(superadminId: widget.superadminId, adminId: widget.adminId),
-                                ));
-                          },
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              fixedSize: Size(100, 45),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              )),
-                          child: Text(
-                            'Return',
-                            style: TextStyle(color: Colors.white, fontSize: 16),
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -632,7 +613,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                           ),
                           child: Text('Save Changes', style: TextStyle(color: Colors.white, fontSize: 15)),
                         ),
-                        SizedBox(height: 20),
+                        SizedBox(height: 35),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -646,10 +627,20 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                             SizedBox(height: 5),
                             TextField(
                               controller: newPasswordController,
-                              obscureText: true,
+                              obscureText: !isPasswordVisible,
                               decoration: InputDecoration(
                                 labelText: 'New Password',
                                 border: OutlineInputBorder(),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                                  ),
+                                  onPressed: (){
+                                    setState(() {
+                                      isPasswordVisible = !isPasswordVisible;
+                                    });
+                                  },
+                                )
                               ),
                             ),
                             SizedBox(height: 15),
@@ -657,13 +648,23 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                         ),
                         TextField(
                           controller: confirmPasswordController,
-                          obscureText: true,
+                          obscureText: !isPasswordVisible,
                           decoration: InputDecoration(
                             labelText: 'Confirm Password',
                             border: OutlineInputBorder(),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                              ),
+                              onPressed: (){
+                                setState(() {
+                                  isPasswordVisible = !isPasswordVisible;
+                                });
+                              },
+                            ),
                           ),
                         ),
-                        SizedBox(height: 15),
+                        SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: _changePassword,
                           style: ElevatedButton.styleFrom(
@@ -674,22 +675,6 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                             ),
                           ),
                           child: Text('Change Password', style: TextStyle(color: Colors.white, fontSize: 15)),
-                        ),
-                        SizedBox(height: 10),
-                        ElevatedButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
-                              minimumSize: Size(100, 45),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              )),
-                          child: Text(
-                            'Return',
-                            style: TextStyle(color: Colors.white, fontSize: 15),
-                          ),
                         ),
                       ],
                     ),

@@ -227,8 +227,6 @@ class _AdminMainPageState extends State<AdminMainPage> {
         {'label': 'Packages Profit', 'value': packagesProfit, 'color': Colors.blue},
       ];
 
-      print('Fetched dataList: $dataList');
-
       setState(() {
         totalSales = sales;
         totalParkingTransactions = parkingProfit;
