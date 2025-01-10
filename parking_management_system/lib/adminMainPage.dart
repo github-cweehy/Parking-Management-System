@@ -46,16 +46,18 @@ class _AdminMainPageState extends State<AdminMainPage> {
   @override
   void initState() {
     super.initState();
-    startDate = DateTime.now(); //initialize current date
+    startDate = DateTime.now(); 
     endDate = DateTime.now();
     _fetchTransactionsData();
+    _fetchSuperAdminUsername();
+    _fetchAdminUsername();
   }
 
+  //avoid back from other page occure error
+  //ScaffoldMessenger can be safely used
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _fetchSuperAdminUsername();
-    _fetchAdminUsername();
   }
 
   // Fetch superadmin username from Firebase
@@ -63,13 +65,17 @@ class _AdminMainPageState extends State<AdminMainPage> {
     try {
       final superadminDoc = await FirebaseFirestore.instance.collection('superadmin').doc(widget.superadminId).get();
       if (superadminDoc.exists) {
-        setState(() {
-          admin_username = superadminDoc.data()?['superadmin_username'] ?? 'Superadmin Username';
-        });
+        final role = superadminDoc.data()?['role']??'superadmin';
+
+        if(role == 'superadmin') {
+          setState(() {
+            admin_username = superadminDoc.data()?['superadmin_username'] ?? 'Superadmin Username';
+          });
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error fetching data: $e')),
+        SnackBar(content: Text('Error fetching superadmin data: $e')),
       );
     }
   }
@@ -79,9 +85,15 @@ class _AdminMainPageState extends State<AdminMainPage> {
     try {
       final adminDoc = await FirebaseFirestore.instance.collection('admins').doc(widget.adminId).get();
 
-      setState(() {
-        admin_username = adminDoc.data()?['admin_username'] ?? 'Admin Username';
-      });
+      if(adminDoc.exists) {
+        final role = adminDoc.data()?['role'] ?? 'admins';
+
+        if(role == 'admins') {
+          setState(() {
+            admin_username = adminDoc.data()?['admin_username'] ?? 'Admin Username';
+          });
+        }
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error fetching data: $e')),
