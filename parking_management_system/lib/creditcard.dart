@@ -153,7 +153,7 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
 
               // Card Name
               TextFormField(
-                controller: _cardHolderNameController, // Use the new controller
+                controller: _cardHolderNameController, 
                 decoration: InputDecoration(
                   labelText: 'Name on Card',
                   filled: true,
@@ -163,6 +163,15 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
                     borderSide: BorderSide.none,
                   ),
                 ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your name on the card';
+                  }
+                  else if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                    return 'Name can only contain letters and spaces';
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: 20),
 

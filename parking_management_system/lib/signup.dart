@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/services.dart';
 import 'login.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -320,6 +321,8 @@ class _SignUpPageState extends State<SignUpPage> {
 
                   // Phone Number Field
                   TextFormField(
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     onChanged: (value) => phoneNumber = value,
                     decoration: InputDecoration(
                       labelText: 'Phone Number',
@@ -333,6 +336,9 @@ class _SignUpPageState extends State<SignUpPage> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your phone number';
+                      }
+                      if (!RegExp(r'^01\d{8,9}$').hasMatch(value)) {
+                        return 'Phone number must start with 01 and be 10-11 digits long';
                       }
                       return null;
                     },

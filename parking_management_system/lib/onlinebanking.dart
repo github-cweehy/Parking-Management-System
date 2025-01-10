@@ -17,6 +17,7 @@ class OnlineBankingPage extends StatefulWidget {
 
 class _OnlineBankingPageState extends State<OnlineBankingPage> {
   final _formKey = GlobalKey<FormState>();
+  String? _selectedBank; 
   final TextEditingController _bankNameController = TextEditingController();
   final TextEditingController _accountNumberController = TextEditingController();
   final TextEditingController _accountNameController = TextEditingController();
@@ -110,23 +111,40 @@ class _OnlineBankingPageState extends State<OnlineBankingPage> {
               SizedBox(height: 20),
 
               //Bank Name
-              TextFormField(
-                controller: _bankNameController,
+              DropdownButtonFormField<String>(
+                value: _selectedBank,
                 decoration: InputDecoration(
-                  labelText: 'Bank Name',
+                  labelText: 'Select Bank',
                   filled: true,
                   fillColor: Colors.grey[200],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
-                  )
+                  ),
                 ),
+                items: ['Public Bank', 'CIMB Bank', 'Maybank', 'OCBC Bank']
+                  .map((bank) => DropdownMenuItem<String>(
+                        value: bank,
+                        child: Text(bank),
+                      )).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedBank = value;
+                  });
+                },
+                validator: (value){
+                  if(value == null || value.isEmpty){
+                    return 'Please select a bank';
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: 20),
 
               //Account Number
               TextFormField(
                 controller: _accountNumberController,
+                keyboardType: TextInputType.number,
                 decoration: InputDecoration(
                   labelText: 'Account Number',
                   filled: true,
@@ -134,8 +152,29 @@ class _OnlineBankingPageState extends State<OnlineBankingPage> {
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
-                  )
+                  ),
                 ),
+                validator: (value){
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your account number';
+                  }
+                  if ( _selectedBank == 'Public Bank' && value.length != 10) {
+                    return 'Public Bank account number must be 10 digits';
+                  }
+                  if (_selectedBank == 'CIMB Bank' && value.length != 12) {
+                    return 'CIMB Bank account number must be 12 digits';
+                  }
+                  if (_selectedBank == 'Maybank' && value.length != 12) {
+                    return 'CIMB Bank account number must be 12 digits';
+                  }
+                  if (_selectedBank == 'OCBC Bank' && value.length != 10) {
+                    return 'CIMB Bank account number must be 12 digits';
+                  }
+                  if (!RegExp(r'^\d+$').hasMatch(value)) {
+                    return 'Account number must contain only digits';
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: 20),
 
@@ -151,6 +190,15 @@ class _OnlineBankingPageState extends State<OnlineBankingPage> {
                     borderSide: BorderSide.none,
                   )
                 ),
+                validator: (value){
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter your account holder name';
+                  }
+                  else if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                    return 'Name can only contain letters and spaces';
+                  }
+                  return null;
+                },
               ),
               SizedBox(height: 20),
 
