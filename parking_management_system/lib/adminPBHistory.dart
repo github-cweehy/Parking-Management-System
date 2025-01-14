@@ -110,12 +110,21 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
   }
 
   Stream<QuerySnapshot> getFilteredData() {
-    if (startTimestamp != null && endTimestamp != null) {
-      return _firestore.collection('packages_bought').where('startDate', isGreaterThanOrEqualTo: startTimestamp).where('startDate', isLessThanOrEqualTo: endTimestamp).snapshots();
-    } else {
-      return _firestore.collection('packages_bought').snapshots();
-    }
+  if (startTimestamp != null && endTimestamp != null) {
+    return _firestore
+        .collection('packages_bought')
+        .where('startDate', isGreaterThanOrEqualTo: startTimestamp)
+        .where('startDate', isLessThanOrEqualTo: endTimestamp)
+        .orderBy('startDate', descending: true) 
+        .snapshots();
+  } 
+  else {
+    return _firestore
+        .collection('packages_bought')
+        .orderBy('startDate', descending: true) 
+        .snapshots();
   }
+}
 
   void _selectDate(BuildContext context, bool isStartDate) async {
     List<DateTime> availableDates = await getAvailableDates();
@@ -667,18 +676,8 @@ class _PackagesBoughtHistoryPage extends State<PackagesBoughtHistoryPage> {
 
   String _monthName(int month) {
     const monthNames = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return monthNames[month - 1];
   }

@@ -47,31 +47,44 @@ class _ManageAccountPage extends State<ManageAccountPage> {
     _fetchAdminUsername();
   }
 
-  // Fetch superadmin username from Firebase
+ // Fetch superadmin username from Firebase
   void _fetchSuperAdminUsername() async {
     try {
-      DocumentSnapshot snapshot = await _firestore.collection('superadmin').doc(widget.superadminId).get();
-      if (snapshot.exists && snapshot.data() != null) {
-        setState(() {
-          admin_username = snapshot['superadmin_username'];
-        });
+      final superadminDoc = await FirebaseFirestore.instance.collection('superadmin').doc(widget.superadminId).get();
+      if (superadminDoc.exists) {
+        final role = superadminDoc.data()?['role']??'superadmin';
+
+        if(role == 'superadmin') {
+          setState(() {
+            admin_username = superadminDoc.data()?['superadmin_username'] ?? 'Superadmin Username';
+          });
+        }
       }
     } catch (e) {
-      print("Error fetching superadmin username: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching superadmin data: $e')),
+      );
     }
   }
 
   // Fetch admin username from Firebase
   void _fetchAdminUsername() async {
     try {
-      DocumentSnapshot snapshot = await _firestore.collection('admins').doc(widget.adminId).get();
-      if (snapshot.exists && snapshot.data() != null) {
-        setState(() {
-          admin_username = snapshot['admin_username'];
-        });
+      final adminDoc = await FirebaseFirestore.instance.collection('admins').doc(widget.adminId).get();
+
+      if(adminDoc.exists) {
+        final role = adminDoc.data()?['role'] ?? 'admins';
+
+        if(role == 'admins') {
+          setState(() {
+            admin_username = adminDoc.data()?['admin_username'] ?? 'Admin Username';
+          });
+        }
       }
     } catch (e) {
-      print("Error fetching admin username: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching data: $e')),
+      );
     }
   }
 
@@ -84,6 +97,11 @@ class _ManageAccountPage extends State<ManageAccountPage> {
         data['docId'] = doc.id;
         return data;
       }).toList();
+
+      //Sort by admin_username
+      updatedAccounts.sort((a, b) {
+        return (a['admin_username'] ?? '').compareTo(b['admin_username'] ?? '');
+      });
 
       setState(() {
         adminAccounts = updatedAccounts;
@@ -473,11 +491,15 @@ class _ManageAccountPage extends State<ManageAccountPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
+                      onPressed: () async {
+                        final refreshPage = await Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => CreateAdminAccountPage(superadminId: '', adminId: '')),
+                          MaterialPageRoute(builder: (context) => CreateAdminAccountPage(superadminId: widget.superadminId ?? '', adminId: widget.adminId ?? '')),
                         );
+                        //Returns is true then refreshes the data
+                        if(refreshPage == true) {
+                          _fetchAdminAccounts();
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.red,
