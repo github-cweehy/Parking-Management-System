@@ -171,7 +171,10 @@ class _EditParkingSelectionPageState extends State<EditParkingSelectionPage> {
                 });
                 Navigator.of(context).pop(); // Close dialog
               },
-              child: Text("Save"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, 
+              ),
+              child: Text("Save", style: TextStyle(color: Colors.white)),
             ),
           ],
         );

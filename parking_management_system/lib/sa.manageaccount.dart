@@ -203,35 +203,9 @@ class _ManageAccountPage extends State<ManageAccountPage> {
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: DropdownButton<String>(
-              underline: Container(),
-              icon: Row(
-                children: [
-                  Text(admin_username, style: TextStyle(color: Colors.black)),
-                  Icon(Icons.arrow_drop_down, color: Colors.black),
-                ],
-              ),
-              items: <String>[
-                'Profile',
-                'Logout'
-              ].map((String value) {
-                return DropdownMenuItem<String>(
-                  value: value,
-                  child: Text(value),
-                );
-              }).toList(),
-              onChanged: (String? value) {
-                if (value == 'Profile') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AdminProfilePage(superadminId: widget.superadminId ?? '', adminId: widget.adminId ?? ''),
-                    ),
-                  );
-                } else if (value == 'Logout') {
-                  _logout(context);
-                }
-              },
+            child: Text(
+              admin_username,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black),
             ),
           ),
         ],

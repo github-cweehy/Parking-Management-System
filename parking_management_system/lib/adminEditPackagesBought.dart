@@ -162,7 +162,11 @@ class _EditPackagesBoughtPageState extends State<EditPackagesBoughtPage> {
                     SnackBar(content: Text('Please enter valid data.'),
                   ));
                 }
-              }, child: Text("Add"),
+              }, 
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, 
+              ),
+              child: Text("Add", style: TextStyle(color: Colors.white)),
             ),
           ],
         );
