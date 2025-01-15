@@ -172,6 +172,9 @@ class _SignUpPageState extends State<SignUpPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your last name';
                             }
+                            if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                              return 'Last name must contain only letters';
+                            }
                             return null;
                           },
                         ),
@@ -192,6 +195,9 @@ class _SignUpPageState extends State<SignUpPage> {
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your first name';
+                            }
+                            if (!RegExp(r'^[a-zA-Z\s]+$').hasMatch(value)) {
+                              return 'First name must contain only letters';
                             }
                             return null;
                           },

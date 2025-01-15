@@ -100,7 +100,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
   }
 
-  Future<void> _edit(String field, String currentValue) async {
+  Future<void> edit(String field, String currentValue) async {
     TextEditingController controller = TextEditingController(text: currentValue);
 
     showDialog(
@@ -133,6 +133,11 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       _showSnackBar("This phone number is already in use.");
                       return;
                     }
+                  }
+                  
+                  if ((field == 'first_name' || field == 'last_name') && !RegExp(r'^[a-zA-Z\s]+$').hasMatch(newValue)) {
+                      _showSnackBar('$field must contain only letters.');
+                      return;
                   }
                   try {
                     await FirebaseFirestore.instance
@@ -570,13 +575,13 @@ void _setDefaultVehicle(String registrationNumber) async {
 
                         // First Name
                         _buildEditableTextField('First Name', userData?['first_name'],(){
-                          _edit('first_name', userData?['first_name'] ?? '');
+                          edit('first_name', userData?['first_name'] ?? '');
                         }),
                         const SizedBox(height: 10),
 
                         // Last Name
                         _buildEditableTextField('Last Name', userData?['last_name'], () {
-                          _edit('last_name', userData?['last_name'] ?? '');
+                          edit('last_name', userData?['last_name'] ?? '');
                         }),
                         const SizedBox(height: 10),
 
@@ -590,7 +595,7 @@ void _setDefaultVehicle(String registrationNumber) async {
 
                         // Phone Number
                         _buildEditableTextField('Phone Number', userData?['phone_number'], () {
-                          _edit('phone_number', userData?['phone_number'] ?? '');
+                          edit('phone_number', userData?['phone_number'] ?? '');
                         }),                        
                         const SizedBox(height: 20),
 

@@ -57,15 +57,18 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
     });
   }
 
-  String formatDateTime(dynamic dateTime) {
-    if (dateTime is Timestamp) {
-      return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(dateTime.toDate());
-    } else if (dateTime is String) {
-      return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.parse(dateTime));
-    } else {
-      return 'Invalid Date';
-    }
+String formatDateTime(dynamic dateTime) {
+  if (dateTime is Timestamp) {
+    return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(dateTime.toDate());
+  } else if (dateTime is String) {
+    return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(DateTime.parse(dateTime));
+  } else if (dateTime is DateTime) {
+    return DateFormat('yyyy-MM-dd HH:mm:ss.SSS').format(dateTime);
+  } else {
+    return 'Invalid Date';
   }
+}
+
   
   @override
   Widget build(BuildContext context) {
@@ -110,7 +113,7 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
                   Text(
                     'Start Date: ${formatDateTime(widget.startDateTime)}',
                     style: TextStyle(fontSize: 16),
-                  ),                
+                  ),   
                 ],
               ),
               SizedBox(height: 10),
@@ -134,7 +137,7 @@ class _ConfirmUsingVoucherPageState extends State<ConfirmUsingVoucherPage> {
                   Text(
                     'End Date: ${formatDateTime(widget.endDateTime)}',
                     style: TextStyle(fontSize: 16),
-                  ),
+                  ),   
                 ],
               ),
               SizedBox(height: 10),
