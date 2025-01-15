@@ -148,11 +148,11 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
     if (picked != null) {
       setState(() {
         if (isStartDate) {
-          startDate = DateTime(picked.year, picked.month, picked.day); // 设置时间为 00:00:00
+          startDate = DateTime(picked.year, picked.month, picked.day); 
           startTimestamp = Timestamp.fromDate(startDate);
         } 
         else {
-          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); // 设置时间为 23:59:59
+          endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
           endTimestamp = Timestamp.fromDate(endDate);
         }
       });
@@ -585,8 +585,8 @@ class _PackagesBoughtTransactionHistoryPage extends State<PackagesBoughtTransact
                                 Timestamp endTimestamp = packageData['endDate'];
 
                                 //String convert to DateTime &(packages_bought)duration (transactions packagesId)
-                                DateTime startDate = startTimestamp.toDate().add(Duration(hours: 8));
-                                DateTime endDate = endTimestamp.toDate().add(Duration(hours: 8));
+                                DateTime startDate = startTimestamp.toDate();
+                                DateTime endDate = endTimestamp.toDate();
                                 String duration = packageData['duration'] ?? 'Not available';
                                 String PlateNum = packageData['vehiclePlate'] ?? 'Not available';
 

@@ -124,6 +124,7 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
     }
   }
 
+  //Select date
   void _selectDate(BuildContext context, bool isStartDate) async{
     List<DateTime> availableDates = await getAvailableDates();
 
@@ -156,6 +157,7 @@ class _ParkingSelectionTransactionHistoryPage extends State<ParkingSelectionTran
         } 
         else {
           endDate = DateTime(picked.year, picked.month, picked.day, 23, 59, 59); 
+          endTimestamp = Timestamp.fromDate(endDate);
         }
       });
     }
