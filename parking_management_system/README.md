@@ -48,6 +48,12 @@ If the AVD is detected, you should see it listed in the output. If not, ensure t
 https://docs.flutter.dev/get-started/install/windows/mobile
 
 
+# Firebase (Database)
+Firebase Link: https://console.firebase.google.com/project/parking-management-fyp/overview
+Use this account to access:
+mail: fypparkingmanagement@gmail.com
+password: Parkingmanagement1234.
+
 
 
 

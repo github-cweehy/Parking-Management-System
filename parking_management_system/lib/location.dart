@@ -280,7 +280,7 @@ class _LocationPageState extends State<LocationPage> {
           GoogleMap(
             onMapCreated: _onMapCreated,
             initialCameraPosition: CameraPosition(
-              target: LatLng(2.1938, 102.2496), // Initial center on Melaka Raya
+              target: LatLng(2.1938, 102.2496), 
               zoom: 14.0,
             ),
             myLocationEnabled: true,
