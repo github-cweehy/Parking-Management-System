@@ -58,16 +58,13 @@ class _LocationPageState extends State<LocationPage> {
 
   void _logout(BuildContext context) async{
   try {
-    // Sign out from Firebase Authentication
     await FirebaseAuth.instance.signOut();
     
-    // Navigate to LoginPage and replace the current page
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => LoginPage()),
     );
   } catch (e) {
-    // Handle any errors that occur during sign-out
     print("Error signing out: $e");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Error signing out. Please try again.')),

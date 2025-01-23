@@ -345,7 +345,7 @@ class _FavouritePageState extends State<FavouritePage> {
                                 'vehiclePlateNum': favourite['vehiclePlateNum'],
                                 'price': favourite['price'],
                                 'startTime': DateTime.now().toString(),
-                                'endTime': DateTime.now().add(Duration(hours: 1)).toString(), // Default duration
+                                'endTime': DateTime.now().add(Duration(hours: 1)).toString(), 
                                 'status': 'temporary',
                               });
 
@@ -354,7 +354,7 @@ class _FavouritePageState extends State<FavouritePage> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => AddParkingPage(
-                                    userparkingselectionID: newParkingDoc.id, // Pass the new document ID
+                                    userparkingselectionID: newParkingDoc.id, 
                                     location: favourite['location'], 
                                     pricingOption: favourite['pricingOption'] ?? 'N/A',
                                     userId: widget.userId,

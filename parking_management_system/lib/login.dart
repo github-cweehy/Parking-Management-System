@@ -44,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
               builder: (context) => AdminMainPage(superadminId: superadminId, adminId: null),
             ),
           );
-          return; // Stop further execution
+          return; 
         } else {
           _showErrorDialog('Incorrect password');
           return;
@@ -70,7 +70,7 @@ class _LoginPageState extends State<LoginPage> {
               builder: (context) => AdminMainPage(superadminId: null, adminId: adminId),
             ),
           );
-          return; // Stop further execution
+          return; 
         } else {
           _showErrorDialog('Incorrect password');
           return;
@@ -86,11 +86,10 @@ class _LoginPageState extends State<LoginPage> {
       if (userSnapshot.docs.isNotEmpty) {
         var userDoc = userSnapshot.docs[0];
         String storedPassword = userDoc['password'];
-        String userId = userDoc.id; // Get the user ID from the document ID
+        String userId = userDoc.id; 
 
-        // Check if password matches
         if (storedPassword == password) {
-          // Navigate to the main page with userId
+          // Navigate to the main page 
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -103,7 +102,7 @@ class _LoginPageState extends State<LoginPage> {
         }
       } else {
         // Show error if username is not found
-        _showErrorDialog('User not found');
+        _showErrorDialog('Account not found');
       }
     } catch (e) {
       // Show error for any other issues
@@ -204,7 +203,6 @@ class _LoginPageState extends State<LoginPage> {
                           .get();
 
                       if (userSnapshot.docs.isNotEmpty) {
-                        // Update password in Firebase
                         String userId = userSnapshot.docs[0].id;
                         await _firestore
                             .collection('users')
@@ -226,7 +224,6 @@ class _LoginPageState extends State<LoginPage> {
                           .get();
 
                       if (userSnapshot.docs.isNotEmpty) {
-                        // Update password in Firebase
                         String userId = userSnapshot.docs[0].id;
                         await _firestore
                             .collection('admins')

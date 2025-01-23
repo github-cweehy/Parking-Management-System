@@ -207,7 +207,7 @@ class _OnlineBankingPageState extends State<OnlineBankingPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red, // Button color
+                    backgroundColor: Colors.red,
                     padding: EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
