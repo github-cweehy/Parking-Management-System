@@ -166,7 +166,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
 
     if (newPassword.length < 12) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Password must be at least 8 characters long.')),
+        SnackBar(content: Text('Password must be at least 12 characters long.')),
       );
       return;
     }
@@ -214,10 +214,42 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
 
   //avoid duplicate phone number
   void _isPhoneNumberDuplicate(String phone_number) async {
+    if (phone_number.length != 10 && phone_number.length != 11) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Phone number must be 10 or 11 digits.')),
+      );
+      return;
+    }
+
+    //Verify the phone number is purely numeric
+    RegExp phoneRegExp = RegExp(r'^[0-9]{10,11}$');
+    if (!phoneRegExp.hasMatch(phone_number)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Phone number must contain only numbers.')),
+      );
+      return;
+    }
+
+    if (!phone_number.startsWith('01')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Phone number must start with "01".')),
+      );
+      return;
+    }
+
     try {
-      QuerySnapshot userSnapshot = await FirebaseFirestore.instance.collection('users').where('phone_number', isEqualTo: phone_number).get();
-      QuerySnapshot superadminSnapshot = await FirebaseFirestore.instance.collection('superadmin').where('phone_number', isEqualTo: phone_number).get();
-      QuerySnapshot adminSnapshot = await FirebaseFirestore.instance.collection('admins').where('phone_number', isEqualTo: phone_number).get();
+      QuerySnapshot userSnapshot = await FirebaseFirestore.instance
+        .collection('users') 
+        .where('phone_number', isEqualTo: phone_number)
+        .get();
+      QuerySnapshot superadminSnapshot = await FirebaseFirestore.instance
+        .collection('superadmin')
+        .where('phone_number', isEqualTo: phone_number)
+        .get();
+      QuerySnapshot adminSnapshot = await FirebaseFirestore.instance
+        .collection('admins')
+        .where('phone_number', isEqualTo: phone_number)
+        .get();
 
       if (userSnapshot.docs.isNotEmpty || adminSnapshot.docs.isNotEmpty || superadminSnapshot.docs.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -248,6 +280,11 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Phone number updated successfully!')),
       );
+
+      setState(() {
+      adminPhoneNumber = phone_number;
+      });
+      
     } catch (e) {
       print("Error saving phone number: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -593,6 +630,7 @@ class _AdminProfilePageState extends State<AdminProfilePage> {
                         const SizedBox(height: 15),
                         _buildReadOnlyTextField('Email', adminEmail),
                         const SizedBox(height: 15),
+
                         _buildEditableTextField('Phone Number', adminPhoneNumber, () {
                           _edit('phone_number', adminPhoneNumber);
                         }),
