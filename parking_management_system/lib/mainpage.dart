@@ -349,11 +349,9 @@ class _MainPageState extends State<MainPage> {
     bool isFavourite = parkingData['isFavourite'] ?? false;
     String parkingId = parkingData['id'];
 
-    //Retrieve start and end dates as Timestamps from the Firestore document
     dynamic startTimeData = parkingData['startTime'];
     dynamic endTimeData = parkingData['endTime'];
 
-    //Format the start and end times
     String startDate = '';
     String endDate = '';
 

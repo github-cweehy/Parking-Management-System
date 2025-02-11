@@ -191,7 +191,7 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(19),
-                  CardNumberInputFormatter(), // Custom input formatter
+                  CardNumberInputFormatter(), 
                 ],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -256,7 +256,7 @@ class _CardPaymentPageState extends State<CardPaymentPage> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red, // Button color
+                    backgroundColor: Colors.red, 
                     padding: EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),

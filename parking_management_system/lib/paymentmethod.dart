@@ -57,16 +57,13 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
 
   void _logout(BuildContext context) async{
   try {
-    // Sign out from Firebase Authentication
     await FirebaseAuth.instance.signOut();
     
-    // Navigate to LoginPage and replace the current page
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => LoginPage()),
     );
   } catch (e) {
-    // Handle any errors that occur during sign-out
     print("Error signing out: $e");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Error signing out. Please try again.')),
@@ -113,7 +110,6 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
         ),
         centerTitle: true,
       ),
-      // Add the drawer here
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -202,7 +198,6 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Determine the collection and document ID
                   String collection = widget.source == 'history' ? 'history parking' : 'packages_bought';
                   String? documentId = widget.source == 'history' 
                       ? widget.userparkingselectionID 
@@ -264,7 +259,6 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Determine the collection and document ID
                   String collection = widget.source == 'history' ? 'history parking' : 'packages_bought';
                   String? documentId = widget.source == 'history' 
                       ? widget.userparkingselectionID 
@@ -326,7 +320,6 @@ class _PaymentMethodPageState extends State<PaymentMethodPage>{
             ElevatedButton(
               onPressed: () async {
                 try {
-                  // Determine the collection and document ID
                   String collection = widget.source == 'history' ? 'history parking' : 'packages_bought';
                   String? documentId = widget.source == 'history' 
                       ? widget.userparkingselectionID 
@@ -439,7 +432,6 @@ class CancelButton extends StatelessWidget {
               await FirebaseFirestore.instance.collection(collection).doc(documentId).delete();
               print("Document deleted successfully.");
 
-              // Navigate back to the main page
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(

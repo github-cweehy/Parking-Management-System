@@ -62,7 +62,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
       TaskSnapshot snapshot = await uploadTask;
       String downloadUrl = await snapshot.ref.getDownloadURL();
 
-      // Now, store this URL in Firestore
+      //store URL in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(widget.userId)
@@ -176,7 +176,7 @@ Future<bool> _isPhoneNumberDuplicate(String phoneNumber) async {
     return querySnapshot.docs.isNotEmpty;
   } catch (e) {
     print("Error checking for duplicate phone number: $e");
-    return false; // Assume no duplicates on error
+    return false;
   }
 }
 
@@ -251,7 +251,6 @@ void _setDefaultVehicle(String registrationNumber) async {
   }
 }
 
-  // Function to show snack bar with messages
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -387,7 +386,7 @@ void _setDefaultVehicle(String registrationNumber) async {
               .update({'password': newPassword});
 
           _showSnackBar("Password updated successfully.");
-          Navigator.pop(context); // Close the dialog
+          Navigator.pop(context); 
         } else {
           _showSnackBar("Current password is incorrect.");
         }

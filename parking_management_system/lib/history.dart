@@ -60,11 +60,10 @@ class _HistoryPageState extends State<HistoryPage> {
           .where('userID', isEqualTo: widget.userId)
           .get();
 
-      // Return the list of history records
       return querySnapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
     } catch (e) {
       print("Error fetching user history: $e");
-      return []; // Return an empty list in case of error
+      return []; 
     }
   }
 

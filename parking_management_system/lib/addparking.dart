@@ -171,7 +171,7 @@ Future<void> _fetchPricing() async {
       int purchaseCount = userData?['purchaseCount'] ?? 0;
       purchaseCount++;
 
-      // Update the purchase count in Firestore
+      // Update the purchase count 
       await userDocRef.update({'purchaseCount': purchaseCount});
 
       // Check if the user is eligible for a reward

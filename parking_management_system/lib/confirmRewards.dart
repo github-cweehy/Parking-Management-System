@@ -280,7 +280,7 @@ String formatDateTime(dynamic dateTime) {
         ),
       );
     } catch (e) {
-      print("Error saving parking history: $e"); // Logs the error to the console
+      print("Error saving parking history: $e"); 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error saving parking history. Please try again.')),
       );

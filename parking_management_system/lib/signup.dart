@@ -90,7 +90,6 @@ class _SignUpPageState extends State<SignUpPage> {
           MaterialPageRoute(builder: (context) => LoginPage()),
         );
       } catch (e) {
-        // Handle error (e.g., show error message)
         print(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('An error occurred. Please try again.')),
@@ -360,7 +359,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         isNotARobot = value ?? false;
                       });
                     },
-                    controlAffinity: ListTileControlAffinity.leading, // Checkbox on the left
+                    controlAffinity: ListTileControlAffinity.leading, 
                   ),
                   const SizedBox(height: 5),
 

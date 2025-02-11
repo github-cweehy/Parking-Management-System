@@ -253,7 +253,7 @@ class _ConfirmPackagePageState extends State<ConfirmPackagePage> {
                       String? packageId = await _savePackageToFirestore();
 
                       if (packageId == null) {
-                        return; // Do not navigate further
+                        return;
                       }
 
                        Navigator.push(
