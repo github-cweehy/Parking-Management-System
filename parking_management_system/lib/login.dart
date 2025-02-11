@@ -195,7 +195,8 @@ class _LoginPageState extends State<LoginPage> {
                   if (formKey.currentState!.validate()) {
                     String username = _usernameController.text.trim();
                     String newPassword = newPasswordController.text.trim();
-                  
+                    bool updated = false;
+
                     try {
                       QuerySnapshot userSnapshot = await _firestore
                           .collection('users')
@@ -208,10 +209,9 @@ class _LoginPageState extends State<LoginPage> {
                             .collection('users')
                             .doc(userId)
                             .update({'password': newPassword});
+                          updated = true;
                         Navigator.pop(context);
                         _showSnackBar('Password updated successfully!');
-                      } else {
-                        _showSnackBar('Username not found!');
                       }
                     } catch (e) {
                       _showSnackBar('Error: ${e.toString()}');
@@ -231,8 +231,6 @@ class _LoginPageState extends State<LoginPage> {
                             .update({'password': newPassword});
                         Navigator.pop(context);
                         _showSnackBar('Password updated successfully!');
-                      } else {
-                        _showSnackBar('Username not found!');
                       }
                     } catch (e) {
                       _showSnackBar('Error: ${e.toString()}');
