@@ -2,19 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
-import 'adminCustomerList.dart';
-import 'adminEditPackagesBought.dart';
-import 'adminEditParkingSelection.dart';
-import 'adminHelp.dart';
-import 'adminMainPage.dart';
-import 'adminPBHistory.dart';
-import 'adminPBTransactionHistory.dart';
-import 'adminPSHistory.dart';
-import 'adminPSTransactionHistory.dart';
-import 'adminProfile.dart';
-import 'adminReward.dart';
 import 'login.dart';
-import 'sa.manageaccount.dart';
 
 class CreateAdminAccountPage extends StatefulWidget {
   final String superadminId;
@@ -38,32 +26,18 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
   String? password;
   String? phoneNumber;
   bool isNotARobot = false;
-  bool _isPasswordVisible = false;
 
   final TextEditingController _adminUsernameController = TextEditingController();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneNumberController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _fetchSuperAdminUsername();
     _fetchAdminUsername();
-  }
-
-  //Flag if data has been fetched
-  bool _isFetched = false;
-
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_isFetched) {
-      _fetchSuperAdminUsername();
-      _fetchAdminUsername();
-      _isFetched = true;
-    }
   }
 
   // Fetch superadmin username from Firebase
@@ -124,6 +98,32 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
   Future<void> createAdmin() async {
     if (_formKey.currentState!.validate() && isNotARobot) {
       try {
+        final QuerySnapshot userduplicateUsername = await _firestore
+          .collection('users')
+          .where('username', isEqualTo: adminusername)
+          .get();
+
+        final QuerySnapshot adminduplicateUsername = await _firestore
+          .collection('admins')
+          .where('admin_username', isEqualTo: adminusername)
+          .get();
+
+        final QuerySnapshot superadminduplicateUsername = await _firestore
+          .collection('superadmin')
+          .where('superadmin_username', isEqualTo: adminusername)
+          .get();
+
+        if (userduplicateUsername.docs.isNotEmpty || adminduplicateUsername.docs.isNotEmpty || superadminduplicateUsername.docs.isNotEmpty) {
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Username already exists. Please use another username.'),
+              ),
+            );
+          });
+          return;
+        }
+
         final QuerySnapshot userduplicateEmail = await _firestore
           .collection('users')
           .where('email', isEqualTo: email)
@@ -312,10 +312,17 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter admin username';
                             }
+                            if (value.length < 3) {
+                              return 'Username must be at least 3 characters';
+                            }
+                            if (value.length > 10) {
+                              return 'Username must not exceed 10 characters';
+                            }
                             return null;
                           },
                         ),
                         const SizedBox(height: 25),
+                        
                         TextFormField(
                           onChanged: (value) => firstName = value,
                           controller: _firstNameController,
@@ -328,9 +335,11 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter first name' : null,
+                          validator: (value) => 
+                            value == null || value.isEmpty ? 'Please enter first name' : null,
                         ),
                         const SizedBox(height: 25),
+
                         TextFormField(
                           onChanged: (value) => lastName = value,
                           controller: _lastNameController,
@@ -343,9 +352,11 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                               borderSide: BorderSide.none,
                             ),
                           ),
-                          validator: (value) => value == null || value.isEmpty ? 'Please enter last name' : null,
+                          validator: (value) => 
+                            value == null || value.isEmpty ? 'Please enter last name' : null,
                         ),
                         const SizedBox(height: 25),
+
                         TextFormField(
                           onChanged: (value) => email = value,
                           controller: _emailController,
@@ -362,6 +373,9 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                             if (value == null || value.isEmpty) {
                               return 'Please enter email';
                             }
+                             if (value.length > 30) {
+                              return 'Email must not exceed 30 characters';
+                            }
                             if (!RegExp(r'\S+@\S+\.\S+').hasMatch(value)) {
                               return 'Invalid email format';
                             }
@@ -369,6 +383,7 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                           },
                         ),
                         const SizedBox(height: 25),
+
                         TextFormField(
                           onChanged: (value) => phoneNumber = value,
                           controller: _phoneNumberController,
@@ -384,6 +399,12 @@ class _CreateAdminAccount extends State<CreateAdminAccountPage> {
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your phone number';
+                            }
+                            if (value.length != 10 && value.length != 11) {
+                              return 'Phone number must be 10 or 11 digits';
+                            }
+                            if (!RegExp(r'^[0-9]+$').hasMatch(value)) {
+                              return 'Phone number can only contain numbers';
                             }
                             return null;
                           },
